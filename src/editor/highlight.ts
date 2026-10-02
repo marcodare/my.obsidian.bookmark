@@ -5,9 +5,9 @@ import type { Editor } from "obsidian";
 const setFlash = StateEffect.define<number>();
 const clearFlash = StateEffect.define<null>();
 
-const flashLine = Decoration.line({ class: "lesson-bookmark-flash" });
+const flashLine = Decoration.line({ class: "my-obsidian-bookmark-flash" });
 
-/** Decorazione temporanea della riga del bookmark. */
+/** Temporary decoration of the bookmark line. */
 const flashField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(decorations, tr) {
@@ -27,13 +27,13 @@ const flashField = StateField.define<DecorationSet>({
 
 export const highlightExtension: Extension = [flashField];
 
-/** EditorView CodeMirror 6 dietro l'Editor di Obsidian (non tipizzato nell'API pubblica). */
+/** CodeMirror 6 EditorView behind Obsidian's Editor (not typed in the public API). */
 export function editorViewOf(editor: Editor): EditorView | null {
   const cm = (editor as unknown as { cm?: unknown }).cm;
   return cm instanceof EditorView ? cm : null;
 }
 
-/** Evidenzia la riga contenente `offset` per `durationMs` millisecondi. */
+/** Highlights the line containing `offset` for `durationMs` milliseconds. */
 export function flashOffset(editor: Editor, offset: number, durationMs: number): void {
   const view = editorViewOf(editor);
   if (!view) return;
@@ -42,7 +42,7 @@ export function flashOffset(editor: Editor, offset: number, durationMs: number):
     try {
       view.dispatch({ effects: clearFlash.of(null) });
     } catch {
-      // L'editor è stato chiuso nel frattempo: niente da ripulire.
+      // The editor was closed in the meantime: nothing to clean up.
     }
   }, durationMs);
 }

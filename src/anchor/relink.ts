@@ -1,4 +1,4 @@
-import type { LessonBookmark } from "../types";
+import type { Bookmark } from "../types";
 import { fileNameOf } from "../view/grouping";
 import { resolvePosition, type ResolveResult } from "./resolve";
 import { normalizeNewlines } from "./text";
@@ -6,23 +6,23 @@ import { normalizeNewlines } from "./text";
 export interface RelinkCandidate {
   readonly path: string;
   readonly result: Extract<ResolveResult, { kind: "exact" | "relocated" }>;
-  /** Il nome del file coincide con quello originale. */
+  /** The file name matches the original one. */
   readonly sameName: boolean;
 }
 
 export interface RelinkSource {
-  /** Percorsi di tutti i file Markdown del vault. */
+  /** Paths of every Markdown file in the vault. */
   readonly markdownPaths: readonly string[];
   readFile(path: string): Promise<string>;
 }
 
 /**
- * Cerca dove potrebbe essere finito il file di un bookmark orfano.
- * Prima controlla i file con lo stesso nome; con `deep` analizza tutto il vault.
- * Un file è candidato solo se il contesto del bookmark vi si trova in modo univoco.
+ * Looks for where an orphaned bookmark's file may have gone.
+ * Checks files with the same name first; with `deep` it scans the whole vault.
+ * A file is a candidate only if the bookmark context occurs in it exactly once.
  */
 export async function findRelinkCandidates(
-  bookmark: LessonBookmark,
+  bookmark: Bookmark,
   source: RelinkSource,
   deep: boolean,
 ): Promise<RelinkCandidate[]> {
@@ -40,7 +40,7 @@ export async function findRelinkCandidates(
       continue;
     }
     const result = resolvePosition(text, bookmark.position);
-    // Senza lo stesso nome, la sola riga è un indizio troppo debole.
+    // Without the same name, the line alone is too weak a hint.
     const isSameName = fileNameOf(path) === wanted;
     if (
       result.kind === "exact" ||

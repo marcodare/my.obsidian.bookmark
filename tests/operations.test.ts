@@ -20,8 +20,8 @@ import { LESSON, T0, T1, offsetAfter, storeWith } from "./helpers";
 const LINUX = "Linux/modulo00/lezione01/lesson.md";
 const NET = "Networking/modulo01/lezione02/lesson.md";
 
-describe("creazione", () => {
-  it("crea un bookmark con nome, file, posizione e date", () => {
+describe("create", () => {
+  it("creates a bookmark with name, file, position and dates", () => {
     const position = capturePosition(LESSON, offsetAfter(LESSON, "ip rule "), "editor");
     const { store, bookmark } = createBookmark(
       createEmptyStore(),
@@ -42,14 +42,14 @@ describe("creazione", () => {
     expect(bookmark.position.offset).toBe(position.offset);
   });
 
-  it("rifiuta nomi vuoti", () => {
+  it("rejects empty names", () => {
     const position = capturePosition(LESSON, 0, "editor");
     expect(() =>
       createBookmark(createEmptyStore(), { filePath: LINUX, name: "   ", position }, T0, "a"),
     ).toThrow();
   });
 
-  it("trova un bookmark esistente con lo stesso nome nello stesso file", () => {
+  it("finds an existing bookmark with the same name in the same file", () => {
     const { store } = storeWith([
       { filePath: LINUX, name: "Da riprendere", text: LESSON, marker: "ip rule" },
     ]);
@@ -57,7 +57,7 @@ describe("creazione", () => {
     expect(findByFileAndName(store, NET, "Da riprendere")).toBeUndefined();
   });
 
-  it("non modifica lo store originale", () => {
+  it("does not mutate the original store", () => {
     const empty = createEmptyStore();
     createBookmark(
       empty,
@@ -69,8 +69,8 @@ describe("creazione", () => {
   });
 });
 
-describe("aggiornamento, rinomina, eliminazione", () => {
-  it("aggiorna posizione, contesto e updatedAt", () => {
+describe("update, rename, delete", () => {
+  it("updates position, context and updatedAt", () => {
     const { store, bookmarks } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
     ]);
@@ -79,7 +79,7 @@ describe("aggiornamento, rinomina, eliminazione", () => {
     expect(updated.bookmarks[0]).toMatchObject({ position: newPos, updatedAt: T1, createdAt: T0 });
   });
 
-  it("la correzione automatica non cambia updatedAt", () => {
+  it("an automatic fix does not change updatedAt", () => {
     const { store, bookmarks } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
     ]);
@@ -87,7 +87,7 @@ describe("aggiornamento, rinomina, eliminazione", () => {
     expect(healed.bookmarks[0]).toMatchObject({ updatedAt: T0, revisedAt: T1 });
   });
 
-  it("rinomina", () => {
+  it("renames", () => {
     const { store, bookmarks } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
     ]);
@@ -96,7 +96,7 @@ describe("aggiornamento, rinomina, eliminazione", () => {
     expect(() => renameBookmark(store, bookmarks[0]!.id, "", T1)).toThrow();
   });
 
-  it("elimina e lascia un tombstone", () => {
+  it("deletes and leaves a tombstone", () => {
     const { store, bookmarks } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
       { filePath: NET, name: "B", text: LESSON, marker: "kernel" },
@@ -106,23 +106,23 @@ describe("aggiornamento, rinomina, eliminazione", () => {
     expect(deleted.tombstones).toEqual([{ id: bookmarks[0]!.id, deletedAt: T1 }]);
   });
 
-  it("duplica subito dopo l'originale con nome univoco", () => {
+  it("duplicates right after the original with a unique name", () => {
     const { store, bookmarks } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
       { filePath: LINUX, name: "B", text: LESSON, marker: "kernel" },
     ]);
     const first = duplicateBookmark(store, bookmarks[0]!.id, T1, "c1");
     const second = duplicateBookmark(first.store, bookmarks[0]!.id, T1, "c2");
-    expect(first.bookmark.name).toBe("A (copia)");
-    expect(second.bookmark.name).toBe("A (copia 2)");
+    expect(first.bookmark.name).toBe("A (copy)");
+    expect(second.bookmark.name).toBe("A (copy 2)");
     const ordered = [...second.store.bookmarks]
       .sort((a, b) => a.order - b.order)
       .map((b) => b.name);
-    expect(ordered).toEqual(["A", "A (copia 2)", "A (copia)", "B"]);
+    expect(ordered).toEqual(["A", "A (copy 2)", "A (copy)", "B"]);
   });
 });
 
-describe("ordinamento manuale", () => {
+describe("manual order", () => {
   const setup = () =>
     storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "Routing" },
@@ -132,14 +132,14 @@ describe("ordinamento manuale", () => {
   const names = (s: ReturnType<typeof setup>["store"]) =>
     [...s.bookmarks].sort((a, b) => a.order - b.order).map((b) => b.name);
 
-  it("sposta su e giù all'interno del gruppo", () => {
+  it("moves up and down within the group", () => {
     const { store, bookmarks } = setup();
     const peers = bookmarks.map((b) => b.id);
     expect(names(moveBookmark(store, bookmarks[2]!.id, peers, -1, T1))).toEqual(["A", "C", "B"]);
     expect(names(moveBookmark(store, bookmarks[0]!.id, peers, -1, T1))).toEqual(["A", "B", "C"]);
   });
 
-  it("sposta prima di un altro bookmark (drag & drop)", () => {
+  it("moves before another bookmark (drag & drop)", () => {
     const { store, bookmarks } = setup();
     const peers = bookmarks.map((b) => b.id);
     expect(names(moveBookmarkBefore(store, bookmarks[2]!.id, bookmarks[0]!.id, peers, T1))).toEqual(
@@ -153,14 +153,14 @@ describe("ordinamento manuale", () => {
   });
 });
 
-describe("file rinominati, spostati, eliminati", () => {
-  it("file rinominato: aggiorna il percorso", () => {
+describe("renamed, moved, deleted files", () => {
+  it("renamed file: updates the path", () => {
     const { store } = storeWith([{ filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" }]);
     const renamed = relinkPaths(store, LINUX, "Linux/modulo00/lezione01/routing.md", T1);
     expect(renamed.bookmarks[0]!.filePath).toBe("Linux/modulo00/lezione01/routing.md");
   });
 
-  it("cartella spostata: aggiorna tutti i file contenuti", () => {
+  it("moved folder: updates every contained file", () => {
     const { store } = storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
       { filePath: "Linux/modulo00/lezione02/lesson.md", name: "B", text: LESSON, marker: "kernel" },
@@ -174,7 +174,7 @@ describe("file rinominati, spostati, eliminati", () => {
     ]);
   });
 
-  it("file eliminato: il bookmark diventa orfano ma non viene cancellato", () => {
+  it("deleted file: the bookmark becomes orphaned but is not deleted", () => {
     const { store } = storeWith([{ filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" }]);
     const marked = markDeletedPath(store, LINUX, T1);
     expect(marked.bookmarks[0]!.status).toBe("orphan");
@@ -183,10 +183,10 @@ describe("file rinominati, spostati, eliminati", () => {
   });
 });
 
-describe("note", () => {
+describe("notes", () => {
   const position = capturePosition(LESSON, offsetAfter(LESSON, "ip rule "), "editor");
 
-  it("salva la nota ripulita e la omette se vuota", () => {
+  it("saves the trimmed note and omits it when empty", () => {
     const withNote = createBookmark(
       createEmptyStore(),
       { filePath: LINUX, name: "a", note: "  riga 1\r\nriga 2  ", position },
@@ -203,7 +203,7 @@ describe("note", () => {
     expect("note" in empty).toBe(false);
   });
 
-  it("modifica nome e nota, e rimuove la nota svuotata", () => {
+  it("edits name and note, removing a cleared note", () => {
     const { store, bookmark } = createBookmark(
       createEmptyStore(),
       { filePath: LINUX, name: "a", note: "vecchia", position },

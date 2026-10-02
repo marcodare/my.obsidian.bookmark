@@ -4,17 +4,17 @@ import type { GroupingMode, MissingFileBehavior, OpenMode, SortMode } from "./ty
 import { GROUPING_LABELS, SORT_LABELS } from "./view/BookmarkView";
 
 const MISSING_LABELS: Record<MissingFileBehavior, string> = {
-  ask: "Chiedi (proponi di ricollegare)",
-  orphan: "Segna come orfano",
-  delete: "Elimina il bookmark (con conferma)",
+  ask: "Ask (offer to relink)",
+  orphan: "Mark as orphan",
+  delete: "Delete the bookmark (with confirmation)",
 };
 
 const OPEN_LABELS: Record<OpenMode, string> = {
-  same: "Nella tab corrente",
-  newTab: "In una nuova tab",
+  same: "In the current tab",
+  newTab: "In a new tab",
 };
 
-export class LessonBookmarksSettingTab extends PluginSettingTab {
+export class MyObsidianBookmarkSettingTab extends PluginSettingTab {
   constructor(
     app: App,
     plugin: Plugin,
@@ -31,8 +31,8 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("Sidebar").setHeading();
 
     new Setting(containerEl)
-      .setName("Raggruppamento predefinito")
-      .setDesc("Come organizzare i bookmark nella sidebar.")
+      .setName("Default grouping")
+      .setDesc("How bookmarks are organized in the sidebar.")
       .addDropdown((d) =>
         d
           .addOptions(GROUPING_LABELS)
@@ -41,9 +41,9 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Ordinamento")
+      .setName("Sort order")
       .setDesc(
-        "«Manuale» permette di riordinare con il menu (Sposta su/giù) o, su desktop, trascinando.",
+        "“Manual” lets you reorder from the menu (Move up/down) or, on desktop, by dragging.",
       )
       .addDropdown((d) =>
         d
@@ -53,8 +53,8 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Mostra anteprima")
-      .setDesc("Testo vicino alla posizione del bookmark.")
+      .setName("Show preview")
+      .setDesc("Text around the bookmark position.")
       .addToggle((t) =>
         t
           .setValue(settings.showPreview)
@@ -62,17 +62,17 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Mostra percorso")
-      .setDesc("Nome della nota e cartelle sotto il nome del bookmark.")
+      .setName("Show path")
+      .setDesc("Note name and folders below the bookmark name.")
       .addToggle((t) =>
         t.setValue(settings.showPath).onChange((v) => controller.updateSettings({ showPath: v })),
       );
 
-    new Setting(containerEl).setName("Navigazione").setHeading();
+    new Setting(containerEl).setName("Navigation").setHeading();
 
     new Setting(containerEl)
-      .setName("Apertura delle note")
-      .setDesc("Se la nota è già aperta, viene sempre riutilizzata la sua tab.")
+      .setName("Open notes")
+      .setDesc("If the note is already open, its tab is always reused.")
       .addDropdown((d) =>
         d
           .addOptions(OPEN_LABELS)
@@ -81,8 +81,8 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Evidenziazione temporanea")
-      .setDesc("Evidenzia la riga del bookmark dopo averla raggiunta (modalità editing).")
+      .setName("Temporary highlight")
+      .setDesc("Highlights the bookmark line after jumping to it (editing view).")
       .addToggle((t) =>
         t
           .setValue(settings.highlightEnabled)
@@ -90,8 +90,8 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Durata dell'evidenziazione")
-      .setDesc("In secondi.")
+      .setName("Highlight duration")
+      .setDesc("In seconds.")
       .addSlider((s) =>
         s
           .setLimits(0.5, 10, 0.5)
@@ -103,10 +103,10 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Se il file non esiste")
+      .setName("When the file is missing")
       .setDesc(
-        "Cosa fare quando si apre un bookmark il cui file è stato rinominato, spostato o eliminato fuori da Obsidian. " +
-          "I bookmark non vengono mai eliminati in automatico in background.",
+        "What to do when opening a bookmark whose file was renamed, moved or deleted outside Obsidian. " +
+          "Bookmarks are never deleted automatically in the background.",
       )
       .addDropdown((d) =>
         d
@@ -117,13 +117,13 @@ export class LessonBookmarksSettingTab extends PluginSettingTab {
           ),
       );
 
-    new Setting(containerEl).setName("Posizione").setHeading();
+    new Setting(containerEl).setName("Position").setHeading();
 
     new Setting(containerEl)
-      .setName("Segui le modifiche in tempo reale")
+      .setName("Track edits live")
       .setDesc(
-        "Mentre scrivi, sposta i bookmark della nota insieme al testo. " +
-          "Disattivandolo, la posizione viene recuperata solo tramite contesto all'apertura.",
+        "While you type, moves the note's bookmarks along with the text. " +
+          "When off, the position is recovered from context only when the note opens.",
       )
       .addToggle((t) =>
         t

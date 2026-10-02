@@ -1,9 +1,10 @@
 {
-  "id": "lesson-bookmarks",
+  "id": "my-obsidian-bookmark",
   "name": "My Obsidian Bookmark",
   "version": "1.0.0",
   "minAppVersion": "1.7.2",
-  "description": "Bookmark nominati su posizioni precise dentro le note Markdown, salvati senza modificare le note e mostrati in una sidebar dedicata.",
-  "author": "Marco",
+  "description": "Named bookmarks at precise positions inside Markdown notes, stored without modifying the notes and shown in a dedicated sidebar.",
+  "author": "Marco Da Re",
+  "authorUrl": "https://github.com/marcodare",
   "isDesktopOnly": false
 }

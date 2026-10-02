@@ -19,8 +19,8 @@ function vault(files: Record<string, string>): RelinkSource {
   };
 }
 
-describe("ricollegamento di bookmark orfani", () => {
-  it("file spostato in un'altra cartella (stesso nome)", async () => {
+describe("relinking orphaned bookmarks", () => {
+  it("file moved to another folder (same name)", async () => {
     const source = vault({
       "Archivio/Linux/modulo00/lezione01/lesson.md": LESSON,
       "Networking/modulo00/lezione01/lesson.md": "# Altra lezione\n\nNiente di simile.",
@@ -30,7 +30,7 @@ describe("ricollegamento di bookmark orfani", () => {
     expect(candidates[0]!.result.kind).toBe("exact");
   });
 
-  it("file rinominato: trovato solo con la ricerca completa", async () => {
+  it("renamed file: found only by the deep search", async () => {
     const source = vault({ "Linux/modulo00/lezione01/routing.md": `Nuova intro.\n${LESSON}` });
     expect(await findRelinkCandidates(bookmark, source, false)).toEqual([]);
     const deep = await findRelinkCandidates(bookmark, source, true);
@@ -39,7 +39,7 @@ describe("ricollegamento di bookmark orfani", () => {
     ]);
   });
 
-  it("file mancante: nessun candidato", async () => {
+  it("missing file: no candidate", async () => {
     const source = vault({ "Cloud/modulo00/lezione01/lesson.md": "# Cloud\n\nContenuto diverso." });
     expect(await findRelinkCandidates(bookmark, source, true)).toEqual([]);
   });

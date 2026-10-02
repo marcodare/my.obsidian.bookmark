@@ -1,8 +1,8 @@
 import { FuzzySuggestModal, Modal, moment, Setting, type App } from "obsidian";
 import { previewOf } from "../anchor/capture";
-import type { LessonBookmark } from "../types";
+import type { Bookmark } from "../types";
 
-/** Modal che si risolve con un valore, o con `null` se viene chiusa senza scelta. */
+/** Modal that resolves with a value, or with `null` when closed without a choice. */
 abstract class PromiseModal<T> extends Modal {
   private settled = false;
   private resolver: ((value: T | null) => void) | null = null;
@@ -29,7 +29,7 @@ abstract class PromiseModal<T> extends Modal {
 
 export type BookmarkFormResult =
   | { readonly kind: "save"; readonly name: string; readonly note: string }
-  /** L'utente ha scelto un bookmark esistente da spostare alla posizione corrente. */
+  /** The user picked an existing bookmark to move to the current position. */
   | { readonly kind: "move"; readonly id: string };
 
 interface BookmarkFormOptions {
@@ -38,8 +38,8 @@ interface BookmarkFormOptions {
   readonly hint?: string;
   readonly initialName?: string;
   readonly initialNote?: string;
-  /** Bookmark esistenti che un clic sposta alla posizione corrente. */
-  readonly movable?: { readonly title: string; readonly bookmarks: readonly LessonBookmark[] };
+  /** Existing bookmarks that a click moves to the current position. */
+  readonly movable?: { readonly title: string; readonly bookmarks: readonly Bookmark[] };
 }
 
 class BookmarkFormModal extends PromiseModal<BookmarkFormResult> {
@@ -53,8 +53,9 @@ class BookmarkFormModal extends PromiseModal<BookmarkFormResult> {
   override onOpen(): void {
     const { contentEl, options } = this;
     this.setTitle(options.title);
-    contentEl.addClass("lesson-bookmarks-modal");
-    if (options.hint) contentEl.createEl("p", { text: options.hint, cls: "lesson-bookmarks-hint" });
+    contentEl.addClass("my-obsidian-bookmark-modal");
+    if (options.hint)
+      contentEl.createEl("p", { text: options.hint, cls: "my-obsidian-bookmark-hint" });
 
     let name = options.initialName ?? "";
     let note = options.initialNote ?? "";
@@ -62,19 +63,19 @@ class BookmarkFormModal extends PromiseModal<BookmarkFormResult> {
     const submit = () => {
       const trimmed = name.trim();
       if (trimmed.length === 0) {
-        input?.addClass("lesson-bookmarks-invalid");
+        input?.addClass("my-obsidian-bookmark-invalid");
         input?.focus();
         return;
       }
       this.settle({ kind: "save", name: trimmed, note: note.trim() });
     };
 
-    new Setting(contentEl).setName("Nome").addText((text) => {
+    new Setting(contentEl).setName("Name").addText((text) => {
       input = text.inputEl;
       text.setValue(name);
       text.onChange((v) => {
         name = v;
-        text.inputEl.removeClass("lesson-bookmarks-invalid");
+        text.inputEl.removeClass("my-obsidian-bookmark-invalid");
       });
       text.inputEl.addEventListener("keydown", (evt) => {
         if (evt.key === "Enter" && !evt.isComposing) {
@@ -86,12 +87,12 @@ class BookmarkFormModal extends PromiseModal<BookmarkFormResult> {
 
     new Setting(contentEl)
       .setName("Note")
-      .setDesc("Facoltative. Ctrl/Cmd+Invio per salvare.")
-      .setClass("lesson-bookmarks-note-setting")
+      .setDesc("Optional. Ctrl/Cmd+Enter to save.")
+      .setClass("my-obsidian-bookmark-note-setting")
       .addTextArea((area) => {
         area.setValue(note).onChange((v) => (note = v));
         area.inputEl.rows = 5;
-        area.inputEl.addClass("lesson-bookmarks-note-input");
+        area.inputEl.addClass("my-obsidian-bookmark-note-input");
         area.inputEl.addEventListener("keydown", (evt) => {
           if (evt.key === "Enter" && (evt.metaKey || evt.ctrlKey) && !evt.isComposing) {
             evt.preventDefault();
@@ -101,25 +102,25 @@ class BookmarkFormModal extends PromiseModal<BookmarkFormResult> {
       });
 
     new Setting(contentEl)
-      .addButton((b) => b.setButtonText("Annulla").onClick(() => this.settle(null)))
+      .addButton((b) => b.setButtonText("Cancel").onClick(() => this.settle(null)))
       .addButton((b) => b.setButtonText(options.submitLabel).setCta().onClick(submit));
 
     if (options.movable && options.movable.bookmarks.length > 0) {
       contentEl.createEl("h6", { text: options.movable.title });
       contentEl.createEl("p", {
-        text: "Clic su un bookmark per spostarlo qui invece di crearne uno nuovo.",
-        cls: "lesson-bookmarks-hint",
+        text: "Click a bookmark to move it here instead of creating a new one.",
+        cls: "my-obsidian-bookmark-hint",
       });
-      const list = contentEl.createDiv({ cls: "lesson-bookmarks-choice-list" });
+      const list = contentEl.createDiv({ cls: "my-obsidian-bookmark-choice-list" });
       for (const bookmark of options.movable.bookmarks) {
-        const item = list.createEl("button", { cls: "lesson-bookmarks-choice" });
-        item.createDiv({ text: bookmark.name, cls: "lesson-bookmarks-choice-label" });
+        const item = list.createEl("button", { cls: "my-obsidian-bookmark-choice" });
+        item.createDiv({ text: bookmark.name, cls: "my-obsidian-bookmark-choice-label" });
         item.createDiv({
-          text: `${bookmark.filePath} — riga ${bookmark.position.line + 1}`,
-          cls: "lesson-bookmarks-choice-path",
+          text: `${bookmark.filePath} — line ${bookmark.position.line + 1}`,
+          cls: "my-obsidian-bookmark-choice-path",
         });
         if (bookmark.note) {
-          item.createDiv({ text: bookmark.note, cls: "lesson-bookmarks-choice-note" });
+          item.createDiv({ text: bookmark.note, cls: "my-obsidian-bookmark-choice-note" });
         }
         item.addEventListener("click", () => this.settle({ kind: "move", id: bookmark.id }));
       }
@@ -152,7 +153,7 @@ interface ChoiceModalOptions<T> {
   readonly title: string;
   readonly message?: string;
   readonly choices: readonly Choice<T>[];
-  /** Mostra le scelte come elenco verticale (es. candidati), invece che come pulsanti in riga. */
+  /** Shows the choices as a vertical list (e.g. candidates) instead of a row of buttons. */
   readonly list?: boolean;
 }
 
@@ -167,32 +168,32 @@ class ChoiceModal<T> extends PromiseModal<T> {
   override onOpen(): void {
     const { contentEl, options } = this;
     this.setTitle(options.title);
-    contentEl.addClass("lesson-bookmarks-modal");
+    contentEl.addClass("my-obsidian-bookmark-modal");
     if (options.message) {
       for (const paragraph of options.message.split("\n\n"))
         contentEl.createEl("p", { text: paragraph });
     }
 
     if (options.list) {
-      const list = contentEl.createDiv({ cls: "lesson-bookmarks-choice-list" });
+      const list = contentEl.createDiv({ cls: "my-obsidian-bookmark-choice-list" });
       for (const choice of options.choices) {
-        const item = list.createEl("button", { cls: "lesson-bookmarks-choice" });
+        const item = list.createEl("button", { cls: "my-obsidian-bookmark-choice" });
         if (choice.cta) item.addClass("mod-cta");
         if (choice.warning) item.addClass("mod-warning");
-        item.createDiv({ text: choice.label, cls: "lesson-bookmarks-choice-label" });
+        item.createDiv({ text: choice.label, cls: "my-obsidian-bookmark-choice-label" });
         if (choice.description) {
-          item.createDiv({ text: choice.description, cls: "lesson-bookmarks-choice-desc" });
+          item.createDiv({ text: choice.description, cls: "my-obsidian-bookmark-choice-desc" });
         }
         item.addEventListener("click", () => this.settle(choice.value));
       }
       new Setting(contentEl).addButton((b) =>
-        b.setButtonText("Annulla").onClick(() => this.settle(null)),
+        b.setButtonText("Cancel").onClick(() => this.settle(null)),
       );
       return;
     }
 
     const buttons = new Setting(contentEl);
-    buttons.addButton((b) => b.setButtonText("Annulla").onClick(() => this.settle(null)));
+    buttons.addButton((b) => b.setButtonText("Cancel").onClick(() => this.settle(null)));
     for (const choice of options.choices) {
       buttons.addButton((b) => {
         b.setButtonText(choice.label).onClick(() => this.settle(choice.value));
@@ -229,7 +230,7 @@ function formatDate(iso: string): string {
 class DetailsModal extends Modal {
   constructor(
     app: App,
-    private readonly bookmark: LessonBookmark,
+    private readonly bookmark: Bookmark,
   ) {
     super(app);
   }
@@ -238,29 +239,27 @@ class DetailsModal extends Modal {
     const { contentEl, bookmark } = this;
     const { position } = bookmark;
     this.setTitle(bookmark.name);
-    contentEl.addClass("lesson-bookmarks-modal");
+    contentEl.addClass("my-obsidian-bookmark-modal");
     const statusLabel = {
-      ok: "Valido",
-      orphan: "File non trovato",
-      unresolved: "Posizione non verificata",
+      ok: "Valid",
+      orphan: "File not found",
+      unresolved: "Position not verified",
     };
     const rows: [string, string][] = [
-      ["Nota", bookmark.filePath.split("/").pop() ?? bookmark.filePath],
-      ["Percorso", bookmark.filePath],
-      ["Riga", String(position.line + 1)],
-      ["Colonna", String(position.ch + 1)],
-      ["Sezione", position.headingPath.join(" › ") || "—"],
+      ["Note", bookmark.filePath.split("/").pop() ?? bookmark.filePath],
+      ["Path", bookmark.filePath],
+      ["Line", String(position.line + 1)],
+      ["Column", String(position.ch + 1)],
+      ["Section", position.headingPath.join(" › ") || "—"],
       [
-        "Creato da",
-        position.source === "preview"
-          ? "Modalità lettura (prima riga visibile)"
-          : "Cursore nell'editor",
+        "Created from",
+        position.source === "preview" ? "Reading view (first visible line)" : "Editor cursor",
       ],
-      ["Stato", statusLabel[bookmark.status]],
-      ["Creato", formatDate(bookmark.createdAt)],
-      ["Ultima modifica", formatDate(bookmark.updatedAt)],
+      ["Status", statusLabel[bookmark.status]],
+      ["Created", formatDate(bookmark.createdAt)],
+      ["Last modified", formatDate(bookmark.updatedAt)],
     ];
-    const table = contentEl.createEl("table", { cls: "lesson-bookmarks-details" });
+    const table = contentEl.createEl("table", { cls: "my-obsidian-bookmark-details" });
     for (const [label, value] of rows) {
       const tr = table.createEl("tr");
       tr.createEl("th", { text: label });
@@ -268,12 +267,12 @@ class DetailsModal extends Modal {
     }
     if (bookmark.note) {
       contentEl.createEl("h6", { text: "Note" });
-      contentEl.createDiv({ text: bookmark.note, cls: "lesson-bookmarks-details-note" });
+      contentEl.createDiv({ text: bookmark.note, cls: "my-obsidian-bookmark-details-note" });
     }
-    contentEl.createEl("h6", { text: "Anteprima" });
+    contentEl.createEl("h6", { text: "Preview" });
     contentEl.createEl("pre", {
       text: previewOf(position, 500),
-      cls: "lesson-bookmarks-details-preview",
+      cls: "my-obsidian-bookmark-details-preview",
     });
   }
 
@@ -282,30 +281,30 @@ class DetailsModal extends Modal {
   }
 }
 
-export function showDetails(app: App, bookmark: LessonBookmark): void {
+export function showDetails(app: App, bookmark: Bookmark): void {
   new DetailsModal(app, bookmark).open();
 }
 
-/** Ricerca rapida tra tutti i bookmark (Command Palette). */
-export class BookmarkSuggestModal extends FuzzySuggestModal<LessonBookmark> {
+/** Quick search across all bookmarks (command palette). */
+export class BookmarkSuggestModal extends FuzzySuggestModal<Bookmark> {
   constructor(
     app: App,
-    private readonly bookmarks: readonly LessonBookmark[],
-    private readonly onChoose: (bookmark: LessonBookmark) => void,
+    private readonly bookmarks: readonly Bookmark[],
+    private readonly onChoose: (bookmark: Bookmark) => void,
   ) {
     super(app);
-    this.setPlaceholder("Cerca un bookmark per nome o percorso…");
+    this.setPlaceholder("Search a bookmark by name or path…");
   }
 
-  getItems(): LessonBookmark[] {
+  getItems(): Bookmark[] {
     return [...this.bookmarks];
   }
 
-  getItemText(item: LessonBookmark): string {
+  getItemText(item: Bookmark): string {
     return `${item.name} — ${item.filePath}`;
   }
 
-  onChooseItem(item: LessonBookmark): void {
+  onChooseItem(item: Bookmark): void {
     this.onChoose(item);
   }
 }

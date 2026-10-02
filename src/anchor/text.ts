@@ -1,4 +1,4 @@
-/** Utility pure sul testo del documento. Tutti gli offset si riferiscono a testo con "\n". */
+/** Pure helpers on document text. Every offset refers to text with "\n" line endings. */
 
 export interface LineCh {
   readonly line: number;
@@ -61,7 +61,7 @@ export function lineCount(text: string): number {
   return count;
 }
 
-/** Tutte le occorrenze (anche sovrapposte) di `needle` in `text`. */
+/** Every occurrence (overlapping too) of `needle` in `text`. */
 export function findAll(text: string, needle: string): number[] {
   if (needle.length === 0) return [];
   const result: number[] = [];
@@ -76,11 +76,11 @@ export function findAll(text: string, needle: string): number[] {
 
 interface NormalizedText {
   readonly text: string;
-  /** map[i] = offset originale del carattere i del testo normalizzato; map[text.length] = fine. */
+  /** map[i] = original offset of character i of the normalized text; map[text.length] = end. */
   readonly map: readonly number[];
 }
 
-/** Comprime ogni sequenza di spazi bianchi (inclusi "\n") in un singolo spazio. */
+/** Collapses every whitespace run (including "\n") into a single space. */
 export function normalizeWhitespace(text: string): NormalizedText {
   let out = "";
   const map: number[] = [];
@@ -104,8 +104,8 @@ export function normalizeWhitespace(text: string): NormalizedText {
 }
 
 /**
- * Cerca `before + after` nel testo e restituisce gli offset del punto di giunzione.
- * Prova prima la corrispondenza esatta, poi quella con spazi bianchi normalizzati.
+ * Searches `before + after` in the text and returns the offsets of the join point.
+ * Tries an exact match first, then one with normalized whitespace.
  */
 export function findJunctions(text: string, before: string, after: string): number[] {
   const exact = findAll(text, before + after).map((i) => i + before.length);
@@ -114,7 +114,7 @@ export function findJunctions(text: string, before: string, after: string): numb
   const haystack = normalizeWhitespace(text);
   const normBefore = normalizeWhitespace(before).text;
   const needle = normalizeWhitespace(before + after).text;
-  // Se `before` termina e `after` inizia con spazi, nel needle collassano in uno solo.
+  // If `before` ends and `after` starts with whitespace, they collapse into one in the needle.
   const split = Math.min(normBefore.length, needle.length);
   return findAll(haystack.text, needle).map((i) => haystack.map[i + split] ?? text.length);
 }

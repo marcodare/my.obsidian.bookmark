@@ -11,31 +11,31 @@ import {
 import { previewOf } from "../anchor/capture";
 import type { BookmarkController } from "../controller";
 import type { StoreManager } from "../store/StoreManager";
-import type { GroupingMode, LessonBookmark, SortMode } from "../types";
+import type { GroupingMode, Bookmark, SortMode } from "../types";
 import { filterBookmarks } from "./filter";
 import { collectGroupKeys, fileNameOf, folderOf, groupBookmarks, type GroupNode } from "./grouping";
 
-export const VIEW_TYPE_LESSON_BOOKMARKS = "lesson-bookmarks-view";
+export const VIEW_TYPE_BOOKMARKS = "my-obsidian-bookmark-view";
 
 export const GROUPING_LABELS: Record<GroupingMode, string> = {
-  pathTree: "Percorso (albero)",
-  pathFlat: "Percorso completo",
-  topFolder: "Cartella principale",
-  fileName: "Nome file",
-  modifiedDate: "Data di modifica",
-  none: "Nessun raggruppamento",
+  pathTree: "Path (tree)",
+  pathFlat: "Full path",
+  topFolder: "Top-level folder",
+  fileName: "File name",
+  modifiedDate: "Modified date",
+  none: "No grouping",
 };
 
 export const SORT_LABELS: Record<SortMode, string> = {
-  manual: "Manuale",
-  name: "Nome",
-  file: "File e posizione",
-  updated: "Ultima modifica",
+  manual: "Manual",
+  name: "Name",
+  file: "File and position",
+  updated: "Last modified",
 };
 
-const DRAG_MIME = "application/x-lesson-bookmark";
+const DRAG_MIME = "application/x-my-obsidian-bookmark";
 
-/** Ultime cartelle del percorso, per non occupare tutta la larghezza della sidebar. */
+/** Last folders of the path, so it does not take the whole sidebar width. */
 function abbreviateFolder(path: string, keep = 3): string {
   const parts = folderOf(path).split("/").filter(Boolean);
   if (parts.length === 0) return "";
@@ -52,7 +52,7 @@ export class BookmarkView extends ItemView {
   private countEl!: HTMLElement;
   private expandButton!: HTMLElement;
   private renderQueued = false;
-  /** Durante la rinomina inline il ridisegno viene rimandato per non perdere l'input. */
+  /** Rendering is deferred during an inline rename so the input is not lost. */
   private editing = false;
   private draggingId: string | null = null;
   private unsubscribe: (() => void) | null = null;
@@ -68,7 +68,7 @@ export class BookmarkView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_LESSON_BOOKMARKS;
+    return VIEW_TYPE_BOOKMARKS;
   }
 
   getDisplayText(): string {
@@ -82,37 +82,37 @@ export class BookmarkView extends ItemView {
   override async onOpen(): Promise<void> {
     const root = this.contentEl;
     root.empty();
-    root.addClass("lesson-bookmarks-view");
+    root.addClass("my-obsidian-bookmark-view");
 
-    const header = root.createDiv({ cls: "nav-header lesson-bookmarks-header" });
+    const header = root.createDiv({ cls: "nav-header my-obsidian-bookmark-header" });
     const buttons = header.createDiv({ cls: "nav-buttons-container" });
     this.addHeaderButton(
       buttons,
       "bookmark-plus",
-      "Nuovo bookmark nella nota attiva",
+      "New bookmark in the active note",
       () => void this.controller.createAtCurrentPosition(),
     );
     this.addHeaderButton(
       buttons,
       "rotate-cw",
-      "Aggiorna (ricarica data.json e verifica i file)",
+      "Refresh (reload data.json and check files)",
       () => void this.refresh(),
     );
-    this.expandButton = this.addHeaderButton(buttons, "chevrons-down-up", "Comprimi tutto", () =>
+    this.expandButton = this.addHeaderButton(buttons, "chevrons-down-up", "Collapse all", () =>
       this.toggleAll(),
     );
-    this.addHeaderButton(buttons, "layers", "Raggruppa per…", (evt) => this.showGroupingMenu(evt));
-    this.addHeaderButton(buttons, "arrow-up-down", "Ordina per…", (evt) => this.showSortMenu(evt));
+    this.addHeaderButton(buttons, "layers", "Group by…", (evt) => this.showGroupingMenu(evt));
+    this.addHeaderButton(buttons, "arrow-up-down", "Sort by…", (evt) => this.showSortMenu(evt));
 
-    const search = new SearchComponent(root.createDiv({ cls: "lesson-bookmarks-search" }));
-    search.setPlaceholder("Cerca… (name:  path:)");
+    const search = new SearchComponent(root.createDiv({ cls: "my-obsidian-bookmark-search" }));
+    search.setPlaceholder("Search… (name:  path:)");
     search.onChange((value) => {
       this.query = value;
       this.requestRender();
     });
 
-    this.countEl = root.createDiv({ cls: "lesson-bookmarks-count" });
-    this.listEl = root.createDiv({ cls: "lesson-bookmarks-list" });
+    this.countEl = root.createDiv({ cls: "my-obsidian-bookmark-count" });
+    this.listEl = root.createDiv({ cls: "my-obsidian-bookmark-list" });
 
     this.unsubscribe = this.manager.subscribe(() => this.requestRender());
     this.registerEvent(this.app.vault.on("create", () => this.requestRender()));
@@ -153,7 +153,7 @@ export class BookmarkView extends ItemView {
     this.render();
   }
 
-  private isOrphan(bookmark: LessonBookmark): boolean {
+  private isOrphan(bookmark: Bookmark): boolean {
     return this.app.vault.getFileByPath(bookmark.filePath) === null;
   }
 
@@ -165,38 +165,38 @@ export class BookmarkView extends ItemView {
     const visible = filterBookmarks(bookmarks, this.query);
     this.countEl.setText(
       visible.length === bookmarks.length
-        ? `Totale: ${bookmarks.length}`
-        : `Totale: ${bookmarks.length} · trovati: ${visible.length}`,
+        ? `Total: ${bookmarks.length}`
+        : `Total: ${bookmarks.length} · found: ${visible.length}`,
     );
     if (this.manager.isReadOnly)
-      this.countEl.createSpan({ text: " · sola lettura", cls: "mod-warning" });
+      this.countEl.createSpan({ text: " · read-only", cls: "mod-warning" });
 
     this.listEl.empty();
     if (bookmarks.length === 0) {
       this.renderEmpty(
-        "Nessun bookmark.",
-        "Posiziona il cursore in una nota e usa il pulsante 🔖+ nell'intestazione della nota o il comando «Aggiungi bookmark alla posizione corrente».",
+        "No bookmarks.",
+        "Place the cursor in a note and use the 🔖+ button in the note header or the “Add bookmark at current position” command.",
       );
       this.lastRoot = null;
       return;
     }
     if (visible.length === 0) {
-      this.renderEmpty("Nessun risultato.", "Prova a cambiare la ricerca.");
+      this.renderEmpty("No results.", "Try a different search.");
       this.lastRoot = null;
       return;
     }
 
     const root = groupBookmarks(visible, settings.grouping, settings.sort);
     this.lastRoot = root;
-    // Durante una ricerca i gruppi sono sempre espansi, per vedere i risultati.
+    // While searching, groups are always expanded so the results are visible.
     const collapsed = this.query.trim() ? new Set<string>() : new Set(settings.collapsedGroups);
     this.renderNode(root, this.listEl, collapsed);
     this.updateExpandButton();
   }
 
   private renderEmpty(title: string, hint: string): void {
-    const empty = this.listEl.createDiv({ cls: "lesson-bookmarks-empty" });
-    empty.createDiv({ text: title, cls: "lesson-bookmarks-empty-title" });
+    const empty = this.listEl.createDiv({ cls: "my-obsidian-bookmark-empty" });
+    empty.createDiv({ text: title, cls: "my-obsidian-bookmark-empty-title" });
     empty.createDiv({ text: hint });
   }
 
@@ -216,23 +216,23 @@ export class BookmarkView extends ItemView {
     collapsed: ReadonlySet<string>,
   ): void {
     const isCollapsed = collapsed.has(group.key);
-    const item = container.createDiv({ cls: "lesson-bookmarks-group" });
+    const item = container.createDiv({ cls: "my-obsidian-bookmark-group" });
     if (isCollapsed) item.addClass("is-collapsed");
 
     const header = item.createDiv({
-      cls: "lesson-bookmarks-group-header",
+      cls: "my-obsidian-bookmark-group-header",
       attr: { tabindex: "0", role: "button" },
     });
     setIcon(
-      header.createSpan({ cls: "lesson-bookmarks-group-chevron" }),
+      header.createSpan({ cls: "my-obsidian-bookmark-group-chevron" }),
       isCollapsed ? "chevron-right" : "chevron-down",
     );
     setIcon(
-      header.createSpan({ cls: "lesson-bookmarks-group-icon" }),
+      header.createSpan({ cls: "my-obsidian-bookmark-group-icon" }),
       group.kind === "file" ? "file-text" : group.kind === "bucket" ? "calendar" : "folder",
     );
-    header.createSpan({ text: group.label, cls: "lesson-bookmarks-group-label" });
-    header.createSpan({ text: String(group.count), cls: "lesson-bookmarks-group-count" });
+    header.createSpan({ text: group.label, cls: "my-obsidian-bookmark-group-label" });
+    header.createSpan({ text: String(group.count), cls: "my-obsidian-bookmark-group-count" });
     setTooltip(header, group.key.replace(/^\w+:/, "") || group.label);
 
     const toggle = () => this.toggleGroup(group.key);
@@ -245,58 +245,61 @@ export class BookmarkView extends ItemView {
     });
 
     if (!isCollapsed)
-      this.renderNode(group, item.createDiv({ cls: "lesson-bookmarks-children" }), collapsed);
+      this.renderNode(group, item.createDiv({ cls: "my-obsidian-bookmark-children" }), collapsed);
   }
 
   private renderBookmark(
-    bookmark: LessonBookmark,
+    bookmark: Bookmark,
     container: HTMLElement,
     peers: readonly string[],
   ): void {
     const { settings } = this.manager.store;
     const orphan = this.isOrphan(bookmark);
     const item = container.createDiv({
-      cls: "lesson-bookmark-item",
+      cls: "my-obsidian-bookmark-item",
       attr: { tabindex: "0", role: "button", "data-id": bookmark.id },
     });
     if (orphan) item.addClass("is-orphan");
     if (bookmark.status === "unresolved") item.addClass("is-unresolved");
 
-    const row = item.createDiv({ cls: "lesson-bookmark-row" });
+    const row = item.createDiv({ cls: "my-obsidian-bookmark-row" });
     setIcon(
-      row.createSpan({ cls: "lesson-bookmark-icon" }),
+      row.createSpan({ cls: "my-obsidian-bookmark-icon" }),
       orphan ? "file-x" : bookmark.status === "unresolved" ? "alert-triangle" : "bookmark",
     );
-    const nameEl = row.createSpan({ text: bookmark.name, cls: "lesson-bookmark-name" });
-    row.createSpan({ text: moment(bookmark.updatedAt).fromNow(), cls: "lesson-bookmark-date" });
+    const nameEl = row.createSpan({ text: bookmark.name, cls: "my-obsidian-bookmark-name" });
+    row.createSpan({
+      text: moment(bookmark.updatedAt).fromNow(),
+      cls: "my-obsidian-bookmark-date",
+    });
     const more = row.createDiv({
-      cls: "clickable-icon lesson-bookmark-more",
-      attr: { "aria-label": "Azioni" },
+      cls: "clickable-icon my-obsidian-bookmark-more",
+      attr: { "aria-label": "Actions" },
     });
     setIcon(more, "more-horizontal");
 
     if (settings.showPath) {
-      const meta = item.createDiv({ cls: "lesson-bookmark-meta" });
-      meta.createSpan({ text: fileNameOf(bookmark.filePath), cls: "lesson-bookmark-note" });
+      const meta = item.createDiv({ cls: "my-obsidian-bookmark-meta" });
+      meta.createSpan({ text: fileNameOf(bookmark.filePath), cls: "my-obsidian-bookmark-note" });
       const folder = abbreviateFolder(bookmark.filePath);
-      if (folder) meta.createSpan({ text: folder, cls: "lesson-bookmark-path" });
+      if (folder) meta.createSpan({ text: folder, cls: "my-obsidian-bookmark-path" });
     }
     if (settings.showPreview) {
-      item.createDiv({ text: previewOf(bookmark.position), cls: "lesson-bookmark-preview" });
+      item.createDiv({ text: previewOf(bookmark.position), cls: "my-obsidian-bookmark-preview" });
     }
     if (bookmark.note) {
-      item.createDiv({ text: bookmark.note, cls: "lesson-bookmark-note-text" });
+      item.createDiv({ text: bookmark.note, cls: "my-obsidian-bookmark-note-text" });
     }
 
     const statusNote = orphan
-      ? "\n⚠ File non trovato"
+      ? "\n⚠ File not found"
       : bookmark.status === "unresolved"
-        ? "\n⚠ Posizione da verificare"
+        ? "\n⚠ Position needs checking"
         : "";
     setTooltip(
       item,
-      `${bookmark.filePath}\nRiga ${bookmark.position.line + 1}, colonna ${bookmark.position.ch + 1}\n` +
-        `Creato: ${formatDate(bookmark.createdAt)}\nUltima modifica: ${formatDate(bookmark.updatedAt)}${statusNote}` +
+      `${bookmark.filePath}\nLine ${bookmark.position.line + 1}, column ${bookmark.position.ch + 1}\n` +
+        `Created: ${formatDate(bookmark.createdAt)}\nLast modified: ${formatDate(bookmark.updatedAt)}${statusNote}` +
         (bookmark.note ? `\n\n${bookmark.note}` : ""),
       { placement: "left" },
     );
@@ -326,10 +329,10 @@ export class BookmarkView extends ItemView {
     if (Platform.isDesktop && settings.sort === "manual") this.enableDrag(item, bookmark.id, peers);
   }
 
-  // ---------------------------------------------------------------- azioni
+  // ---------------------------------------------------------------- actions
 
   private showBookmarkMenu(
-    bookmark: LessonBookmark,
+    bookmark: Bookmark,
     peers: readonly string[],
     orphan: boolean,
     evt: MouseEvent,
@@ -338,25 +341,25 @@ export class BookmarkView extends ItemView {
     const menu = new Menu();
     menu.addItem((i) =>
       i
-        .setTitle("Vai al bookmark")
+        .setTitle("Go to bookmark")
         .setIcon("navigation")
         .onClick(() => void c.goTo(bookmark.id)),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Aggiorna alla posizione corrente")
+        .setTitle("Update to current position")
         .setIcon("locate")
         .onClick(() => void c.updateToCurrentPosition(bookmark.id)),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Modifica nome e note")
+        .setTitle("Edit name and note")
         .setIcon("pencil")
         .onClick(() => void c.edit(bookmark.id)),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Duplica")
+        .setTitle("Duplicate")
         .setIcon("copy-plus")
         .onClick(() => c.duplicate(bookmark.id)),
     );
@@ -366,14 +369,14 @@ export class BookmarkView extends ItemView {
       menu.addSeparator();
       menu.addItem((i) =>
         i
-          .setTitle("Sposta su")
+          .setTitle("Move up")
           .setIcon("arrow-up")
           .setDisabled(index <= 0)
           .onClick(() => c.move(bookmark.id, peers, -1)),
       );
       menu.addItem((i) =>
         i
-          .setTitle("Sposta giù")
+          .setTitle("Move down")
           .setIcon("arrow-down")
           .setDisabled(index === -1 || index >= peers.length - 1)
           .onClick(() => c.move(bookmark.id, peers, 1)),
@@ -383,32 +386,32 @@ export class BookmarkView extends ItemView {
     menu.addSeparator();
     menu.addItem((i) =>
       i
-        .setTitle("Apri nota")
+        .setTitle("Open note")
         .setIcon("file-text")
         .onClick(() => void c.openNote(bookmark.id)),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Copia link")
+        .setTitle("Copy link")
         .setIcon("link")
         .onClick(() => void c.copyToClipboard(c.linkFor(bookmark.id), "Link")),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Copia percorso")
+        .setTitle("Copy path")
         .setIcon("clipboard-copy")
-        .onClick(() => void c.copyToClipboard(bookmark.filePath, "Percorso")),
+        .onClick(() => void c.copyToClipboard(bookmark.filePath, "Path")),
     );
     menu.addItem((i) =>
       i
-        .setTitle("Mostra dettagli")
+        .setTitle("Show details")
         .setIcon("info")
         .onClick(() => c.showDetails(bookmark.id)),
     );
     if (orphan) {
       menu.addItem((i) =>
         i
-          .setTitle("Ricollega a un file…")
+          .setTitle("Relink to a file…")
           .setIcon("file-search")
           .onClick(() => void c.relinkFlow(bookmark)),
       );
@@ -416,7 +419,7 @@ export class BookmarkView extends ItemView {
     menu.addSeparator();
     menu.addItem((i) =>
       i
-        .setTitle("Elimina")
+        .setTitle("Delete")
         .setIcon("trash-2")
         .setWarning(true)
         .onClick(() => void c.delete(bookmark.id)),
@@ -424,13 +427,13 @@ export class BookmarkView extends ItemView {
     menu.showAtMouseEvent(evt);
   }
 
-  private startInlineRename(bookmark: LessonBookmark, nameEl: HTMLElement): void {
+  private startInlineRename(bookmark: Bookmark, nameEl: HTMLElement): void {
     if (this.editing) return;
     this.editing = true;
     const input = createEl("input", {
       type: "text",
       value: bookmark.name,
-      cls: "lesson-bookmark-rename",
+      cls: "my-obsidian-bookmark-rename",
     });
     nameEl.replaceWith(input);
     input.focus();
@@ -467,7 +470,7 @@ export class BookmarkView extends ItemView {
     });
     const clear = () => item.removeClasses(["drop-before", "drop-after"]);
     item.addEventListener("dragover", (evt) => {
-      // Il riordino vale solo all'interno dello stesso gruppo.
+      // Reordering only applies within the same group.
       if (!this.draggingId || this.draggingId === id || !peers.includes(this.draggingId)) return;
       evt.preventDefault();
       const after = evt.offsetY > item.clientHeight / 2;
@@ -487,7 +490,7 @@ export class BookmarkView extends ItemView {
     });
   }
 
-  // ---------------------------------------------------------------- gruppi
+  // ---------------------------------------------------------------- groups
 
   private toggleGroup(key: string): void {
     const current = new Set(this.manager.store.settings.collapsedGroups);
@@ -514,7 +517,7 @@ export class BookmarkView extends ItemView {
   private updateExpandButton(): void {
     const collapsed = this.allCollapsed();
     setIcon(this.expandButton, collapsed ? "chevrons-up-down" : "chevrons-down-up");
-    this.expandButton.setAttr("aria-label", collapsed ? "Espandi tutto" : "Comprimi tutto");
+    this.expandButton.setAttr("aria-label", collapsed ? "Expand all" : "Collapse all");
   }
 
   private showGroupingMenu(evt: MouseEvent): void {

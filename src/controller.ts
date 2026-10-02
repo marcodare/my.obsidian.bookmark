@@ -37,8 +37,8 @@ import type { StoreManager } from "./store/StoreManager";
 import type {
   BookmarkPosition,
   BookmarkStore,
-  LessonBookmark,
-  LessonBookmarksSettings,
+  Bookmark,
+  MyObsidianBookmarkSettings,
 } from "./types";
 import { fileNameOf, ROOT_FOLDER_LABEL, sortBookmarks, topFolderOf } from "./view/grouping";
 import { BookmarkSuggestModal, bookmarkForm, choose, confirm, showDetails } from "./view/modals";
@@ -46,7 +46,9 @@ import { BookmarkSuggestModal, bookmarkForm, choose, confirm, showDetails } from
 const TRACKING_FLUSH_MS = 2000;
 const PERSIST_DEBOUNCE_MS = 3000;
 
-export const PROTOCOL_ACTION = "lesson-bookmarks";
+export const PROTOCOL_ACTION = "my-obsidian-bookmark";
+/** Protocol action used before the plugin was renamed. */
+export const LEGACY_PROTOCOL_ACTION = "lesson-bookmarks";
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -58,13 +60,13 @@ export function newId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Flussi utente: creazione, navigazione, aggiornamento, eliminazione, ricollegamento. */
+/** User flows: create, navigate, update, delete, relink. */
 export class BookmarkController {
-  /** Offset aggiornati in tempo reale durante la modifica, non ancora salvati. */
+  /** Offsets tracked live while editing, not saved yet. */
   private readonly liveOffsets = new Map<string, number>();
   private readonly dirtyDocs = new Map<string, Text>();
   private flushTimer: number | null = null;
-  /** File già verificati in questa sessione, per non ripetere gli avvisi. */
+  /** Files already checked this session, so warnings are not repeated. */
   private readonly warnedFiles = new Set<string>();
 
   constructor(
@@ -76,37 +78,37 @@ export class BookmarkController {
     return this.manager.store;
   }
 
-  get settings(): LessonBookmarksSettings {
+  get settings(): MyObsidianBookmarkSettings {
     return this.manager.store.settings;
   }
 
-  updateSettings(patch: Partial<LessonBookmarksSettings>): void {
+  updateSettings(patch: Partial<MyObsidianBookmarkSettings>): void {
     this.manager.update(
       (s) => updateSettings(s, patch),
       patch.collapsedGroups ? PERSIST_DEBOUNCE_MS : 0,
     );
   }
 
-  // ---------------------------------------------------------------- creazione
+  // ---------------------------------------------------------------- create
 
   async createAtCurrentPosition(view?: MarkdownView): Promise<void> {
     const target = view ?? findTargetMarkdownView(this.app);
     const location = target ? getCurrentLocation(target) : null;
     if (!location) {
-      new Notice("Apri una nota Markdown per creare un bookmark.");
+      new Notice("Open a Markdown note to create a bookmark.");
       return;
     }
-    // La posizione viene letta prima del modal: il cursore potrebbe spostarsi.
+    // The position is read before the modal opens: the cursor could move.
     const position = capturePosition(location.text, location.offset, location.source);
     const filePath = location.file.path;
     const branch = topFolderOf(filePath);
     const result = await bookmarkForm(this.app, {
-      title: "Nuovo bookmark",
-      submitLabel: "Crea",
+      title: "New bookmark",
+      submitLabel: "Create",
       hint:
         location.source === "preview"
-          ? `Modalità lettura: verrà salvata la prima riga visibile (riga ${position.line + 1}).`
-          : `${filePath} — riga ${position.line + 1}, colonna ${position.ch + 1}`,
+          ? `Reading view: the first visible line will be saved (line ${position.line + 1}).`
+          : `${filePath} — line ${position.line + 1}, column ${position.ch + 1}`,
       movable: {
         title: `Bookmark in ${branch || ROOT_FOLDER_LABEL}`,
         bookmarks: sortBookmarks(
@@ -125,20 +127,20 @@ export class BookmarkController {
     const existing = findByFileAndName(this.store, filePath, name);
     if (existing) {
       const update = await confirm(this.app, {
-        title: "Bookmark già esistente",
-        message: `In questa nota esiste già il bookmark "${existing.name}" (riga ${existing.position.line + 1}).\n\nVuoi aggiornarlo alla posizione corrente?`,
-        confirmLabel: "Aggiorna",
+        title: "Bookmark already exists",
+        message: `This note already has a bookmark named "${existing.name}" (line ${existing.position.line + 1}).\n\nMove it to the current position?`,
+        confirmLabel: "Update",
       });
       if (!update) return;
       this.discardLive(existing.id);
       const updated = this.manager.update((s) => {
         const moved = updateBookmarkPosition(s, existing.id, filePath, position, nowIso());
-        // Una nota scritta ora sostituisce quella precedente; se vuota la si mantiene.
+        // A note written now replaces the previous one; an empty note keeps it.
         return note.length > 0
           ? editBookmark(moved, existing.id, { name: existing.name, note }, nowIso())
           : moved;
       });
-      if (updated) new Notice(`Bookmark "${existing.name}" aggiornato.`);
+      if (updated) new Notice(`Bookmark "${existing.name}" updated.`);
       return;
     }
 
@@ -147,36 +149,34 @@ export class BookmarkController {
         (s) => createBookmark(s, { filePath, name, note, position }, nowIso(), newId()).store,
       )
     ) {
-      new Notice(`Bookmark "${name}" creato.`);
+      new Notice(`Bookmark "${name}" created.`);
     }
   }
 
-  /** Sposta un bookmark esistente in una posizione già catturata (eventualmente in un'altra nota). */
+  /** Moves an existing bookmark to an already captured position (possibly in another note). */
   private moveToPosition(id: string, filePath: string, position: BookmarkPosition): void {
     const bookmark = getBookmark(this.store, id);
     if (!bookmark) return;
     const conflict = findByFileAndName(this.store, filePath, bookmark.name, id);
     if (conflict) {
       new Notice(
-        `In ${fileNameOf(filePath)} esiste già un bookmark "${conflict.name}". Rinominalo prima di spostarlo.`,
+        `${fileNameOf(filePath)} already has a bookmark named "${conflict.name}". Rename it before moving.`,
       );
       return;
     }
     this.discardLive(id);
     if (this.manager.update((s) => updateBookmarkPosition(s, id, filePath, position, nowIso()))) {
-      new Notice(
-        `"${bookmark.name}" spostato a ${fileNameOf(filePath)}, riga ${position.line + 1}.`,
-      );
+      new Notice(`"${bookmark.name}" moved to ${fileNameOf(filePath)}, line ${position.line + 1}.`);
     }
   }
 
-  // ---------------------------------------------------------------- navigazione
+  // ---------------------------------------------------------------- navigation
 
   async goTo(id: string): Promise<void> {
     await this.flushTracking();
     const bookmark = getBookmark(this.store, id);
     if (!bookmark) {
-      new Notice("Bookmark non trovato: potrebbe essere stato eliminato da un altro dispositivo.");
+      new Notice("Bookmark not found: it may have been deleted on another device.");
       return;
     }
     const file = this.app.vault.getFileByPath(bookmark.filePath);
@@ -186,7 +186,7 @@ export class BookmarkController {
     }
     const view = await openMarkdownFile(this.app, file, this.settings.openMode);
     if (!view) {
-      new Notice(`Impossibile aprire ${bookmark.filePath} come nota Markdown.`);
+      new Notice(`Cannot open ${bookmark.filePath} as a Markdown note.`);
       return;
     }
     const text = viewText(view);
@@ -203,7 +203,7 @@ export class BookmarkController {
   private async applyResolution(
     view: MarkdownView,
     text: string,
-    bookmark: LessonBookmark,
+    bookmark: Bookmark,
     result: ResolveResult,
   ): Promise<void> {
     switch (result.kind) {
@@ -219,28 +219,28 @@ export class BookmarkController {
         const legacy = lacksContext(bookmark.position);
         new Notice(
           legacy
-            ? `"${bookmark.name}": posizione aperta alla riga salvata; contesto registrato per i prossimi recuperi.`
-            : `"${bookmark.name}": il testo è cambiato, posizione recuperata tramite contesto (riga ${offsetToPos(text, result.offset).line + 1}).`,
+            ? `"${bookmark.name}": opened at the saved line; context recorded for future lookups.`
+            : `"${bookmark.name}": the text changed, position recovered from context (line ${offsetToPos(text, result.offset).line + 1}).`,
         );
         return;
       }
 
       case "ambiguous": {
         const choice = await choose<number | "current">(this.app, {
-          title: `"${bookmark.name}": posizione ambigua`,
+          title: `"${bookmark.name}": ambiguous position`,
           message:
-            "Il testo del bookmark compare in più punti della nota e non è possibile stabilire con certezza quale sia quello giusto. Scegli la posizione corretta:",
+            "The bookmark text appears in several places in the note and the right one cannot be determined with certainty. Pick the correct position:",
           list: true,
           choices: [
             ...result.candidates.map((offset) => ({
-              label: `Riga ${offsetToPos(text, offset).line + 1}`,
+              label: `Line ${offsetToPos(text, offset).line + 1}`,
               description: lineAt(text, offset).trim().slice(0, 140),
               value: offset as number | "current",
             })),
             {
-              label: "Aggiorna alla posizione corrente del cursore",
+              label: "Update to the current cursor position",
               value: "current" as const,
-              description: "Usa la posizione attuale nella nota aperta",
+              description: "Use the current position in the open note",
             },
           ],
         });
@@ -267,20 +267,19 @@ export class BookmarkController {
       case "notFound": {
         this.manager.update((s) => setBookmarkStatus(s, bookmark.id, "unresolved", nowIso()));
         const choice = await choose(this.app, {
-          title: `"${bookmark.name}": posizione non trovata`,
+          title: `"${bookmark.name}": position not found`,
           message:
-            "Il testo vicino al bookmark non è più presente nella nota: probabilmente è stato modificato o rimosso. Il bookmark non è stato spostato.\n\n" +
-            `Testo salvato: «${previewOf(bookmark.position)}»`,
+            "The text around the bookmark is no longer in the note: it was probably edited or removed. The bookmark has not been moved.\n\n" +
+            `Saved text: “${previewOf(bookmark.position)}”`,
           list: true,
           choices: [
             {
-              label: `Apri alla riga salvata (${bookmark.position.line + 1}, approssimata)`,
-              description:
-                "Dopo aver posizionato il cursore, usa «Aggiorna alla posizione corrente».",
+              label: `Open at the saved line (${bookmark.position.line + 1}, approximate)`,
+              description: "After placing the cursor, use “Update to current position”.",
               value: "line" as const,
             },
             {
-              label: "Aggiorna alla posizione corrente del cursore",
+              label: "Update to the current cursor position",
               value: "current" as const,
               cta: true,
             },
@@ -296,8 +295,8 @@ export class BookmarkController {
     }
   }
 
-  /** Corregge la posizione dopo un recupero riuscito. Le posizioni senza contesto lo acquisiscono ora. */
-  private heal(bookmark: LessonBookmark, text: string, offset: number): void {
+  /** Fixes the position after a successful recovery. Positions without context acquire it now. */
+  private heal(bookmark: Bookmark, text: string, offset: number): void {
     const position = lacksContext(bookmark.position)
       ? capturePosition(text, offset, bookmark.position.source)
       : withOffset(text, bookmark.position, offset);
@@ -305,18 +304,18 @@ export class BookmarkController {
     this.manager.update((s) => healBookmarkPosition(s, bookmark.id, position, nowIso()));
   }
 
-  // ---------------------------------------------------------------- file mancanti
+  // ---------------------------------------------------------------- missing files
 
-  private async handleMissingFile(bookmark: LessonBookmark): Promise<void> {
+  private async handleMissingFile(bookmark: Bookmark): Promise<void> {
     this.manager.update((s) => setBookmarkStatus(s, bookmark.id, "orphan", nowIso()));
     switch (this.settings.missingFileBehavior) {
       case "orphan":
         new Notice(
-          `Il file ${bookmark.filePath} non esiste più. Il bookmark "${bookmark.name}" è segnato come orfano.`,
+          `The file ${bookmark.filePath} no longer exists. Bookmark "${bookmark.name}" is marked as orphaned.`,
         );
         return;
       case "delete":
-        await this.delete(bookmark.id, `Il file ${bookmark.filePath} non esiste più.`);
+        await this.delete(bookmark.id, `The file ${bookmark.filePath} no longer exists.`);
         return;
       case "ask":
         await this.relinkFlow(bookmark);
@@ -328,17 +327,14 @@ export class BookmarkController {
     return this.app.vault.getMarkdownFiles().map((f) => f.path);
   }
 
-  private async findCandidates(
-    bookmark: LessonBookmark,
-    deep: boolean,
-  ): Promise<RelinkCandidate[]> {
+  private async findCandidates(bookmark: Bookmark, deep: boolean): Promise<RelinkCandidate[]> {
     return findRelinkCandidates(
       bookmark,
       {
         markdownPaths: this.markdownPaths(),
         readFile: async (path) => {
           const file = this.app.vault.getFileByPath(path);
-          if (!file) throw new Error(`File non trovato: ${path}`);
+          if (!file) throw new Error(`File not found: ${path}`);
           return this.app.vault.cachedRead(file);
         },
       },
@@ -346,7 +342,7 @@ export class BookmarkController {
     );
   }
 
-  async relinkFlow(bookmark: LessonBookmark): Promise<void> {
+  async relinkFlow(bookmark: Bookmark): Promise<void> {
     let deep = false;
     let candidates = await this.findCandidates(bookmark, false);
     for (;;) {
@@ -357,11 +353,11 @@ export class BookmarkController {
         | { kind: "delete" };
       const choices = [
         ...candidates.map((candidate) => ({
-          label: `Ricollega a ${candidate.path}`,
+          label: `Relink to ${candidate.path}`,
           description:
             candidate.result.kind === "exact"
-              ? "Il testo del bookmark è presente nella stessa posizione."
-              : "Il testo del bookmark è stato ritrovato in questo file.",
+              ? "The bookmark text is at the same position."
+              : "The bookmark text was found in this file.",
           value: { kind: "relink", candidate } as Action,
           cta: candidate === candidates[0],
         })),
@@ -369,20 +365,20 @@ export class BookmarkController {
           ? []
           : [
               {
-                label: "Cerca in tutto il vault",
-                description: "Analizza tutte le note: può richiedere tempo.",
+                label: "Search the whole vault",
+                description: "Scans every note: it may take a while.",
                 value: { kind: "deep" } as Action,
               },
             ]),
-        { label: "Mantieni come orfano", value: { kind: "orphan" } as Action },
-        { label: "Elimina il bookmark", value: { kind: "delete" } as Action, warning: true },
+        { label: "Keep as orphan", value: { kind: "orphan" } as Action },
+        { label: "Delete the bookmark", value: { kind: "delete" } as Action, warning: true },
       ];
       const action = await choose(this.app, {
-        title: `"${bookmark.name}": file non trovato`,
+        title: `"${bookmark.name}": file not found`,
         message:
-          `Il file ${bookmark.filePath} non esiste più (rinominato, spostato o eliminato, anche da un altro dispositivo).` +
+          `The file ${bookmark.filePath} no longer exists (renamed, moved or deleted, possibly on another device).` +
           (candidates.length === 0
-            ? `\n\nNessun file candidato trovato${deep ? " nel vault" : " con lo stesso nome"}.`
+            ? `\n\nNo candidate file found${deep ? " in the vault" : " with the same name"}.`
             : ""),
         list: true,
         choices,
@@ -394,7 +390,7 @@ export class BookmarkController {
       }
       if (action.kind === "deep") {
         deep = true;
-        new Notice("Ricerca in tutto il vault…");
+        new Notice("Searching the whole vault…");
         candidates = await this.findCandidates(bookmark, true);
         continue;
       }
@@ -406,13 +402,13 @@ export class BookmarkController {
       this.manager.update((s) =>
         relinkBookmark(s, bookmark.id, candidate.path, position, nowIso()),
       );
-      new Notice(`"${bookmark.name}" ricollegato a ${candidate.path}.`);
+      new Notice(`"${bookmark.name}" relinked to ${candidate.path}.`);
       await this.goTo(bookmark.id);
       return;
     }
   }
 
-  // ---------------------------------------------------------------- modifiche
+  // ---------------------------------------------------------------- edits
 
   async updateToCurrentPosition(id: string, preferredView?: MarkdownView): Promise<void> {
     const bookmark = getBookmark(this.store, id);
@@ -420,7 +416,7 @@ export class BookmarkController {
     const view = preferredView ?? findTargetMarkdownView(this.app);
     const location: CurrentLocation | null = view ? getCurrentLocation(view) : null;
     if (!location) {
-      new Notice("Apri la nota e posiziona il cursore, poi riprova.");
+      new Notice("Open the note and place the cursor, then try again.");
       return;
     }
     const targetPath = location.file.path;
@@ -428,25 +424,25 @@ export class BookmarkController {
       const conflict = findByFileAndName(this.store, targetPath, bookmark.name, bookmark.id);
       if (conflict) {
         new Notice(
-          `In ${fileNameOf(targetPath)} esiste già un bookmark "${conflict.name}". Rinominalo prima di spostarlo.`,
+          `${fileNameOf(targetPath)} already has a bookmark named "${conflict.name}". Rename it before moving.`,
         );
         return;
       }
       const move = await confirm(this.app, {
-        title: "Spostare il bookmark in un'altra nota?",
-        message: `"${bookmark.name}" appartiene a ${bookmark.filePath}.\n\nLa nota attiva è ${targetPath}: vuoi spostare il bookmark qui, alla posizione corrente?`,
-        confirmLabel: "Sposta qui",
+        title: "Move the bookmark to another note?",
+        message: `"${bookmark.name}" belongs to ${bookmark.filePath}.\n\nThe active note is ${targetPath}: move the bookmark here, to the current position?`,
+        confirmLabel: "Move here",
       });
       if (!move) return;
     }
     const position = capturePosition(location.text, location.offset, location.source);
     this.discardLive(id);
     if (this.manager.update((s) => updateBookmarkPosition(s, id, targetPath, position, nowIso()))) {
-      new Notice(`"${bookmark.name}" aggiornato alla riga ${position.line + 1}.`);
+      new Notice(`"${bookmark.name}" updated to line ${position.line + 1}.`);
     }
   }
 
-  /** Rinomina diretta (modifica inline nella sidebar). */
+  /** Direct rename (inline edit in the sidebar). */
   async rename(id: string, newName: string): Promise<void> {
     const bookmark = getBookmark(this.store, id);
     if (!bookmark || newName.trim() === bookmark.name) return;
@@ -454,13 +450,13 @@ export class BookmarkController {
     this.manager.update((s) => renameBookmark(s, id, newName, nowIso()));
   }
 
-  /** Modifica nome e nota tramite modal. */
+  /** Edits name and note through a modal. */
   async edit(id: string): Promise<void> {
     const bookmark = getBookmark(this.store, id);
     if (!bookmark) return;
     const result = await bookmarkForm(this.app, {
-      title: "Modifica bookmark",
-      submitLabel: "Salva",
+      title: "Edit bookmark",
+      submitLabel: "Save",
       initialName: bookmark.name,
       initialNote: bookmark.note,
     });
@@ -469,14 +465,14 @@ export class BookmarkController {
     this.manager.update((s) => editBookmark(s, id, result, nowIso()));
   }
 
-  private checkName(bookmark: LessonBookmark, name: string): boolean {
+  private checkName(bookmark: Bookmark, name: string): boolean {
     if (name.trim().length === 0) {
-      new Notice("Il nome non può essere vuoto.");
+      new Notice("The name cannot be empty.");
       return false;
     }
     const conflict = findByFileAndName(this.store, bookmark.filePath, name, bookmark.id);
     if (conflict) {
-      new Notice(`Esiste già un bookmark "${conflict.name}" in questa nota.`);
+      new Notice(`This note already has a bookmark named "${conflict.name}".`);
       return false;
     }
     return true;
@@ -491,15 +487,15 @@ export class BookmarkController {
     const bookmark = getBookmark(this.store, id);
     if (!bookmark) return;
     const ok = await confirm(this.app, {
-      title: "Eliminare il bookmark?",
-      message: `${reason ? `${reason}\n\n` : ""}"${bookmark.name}" — ${bookmark.filePath}\n\nLa nota non verrà modificata.`,
-      confirmLabel: "Elimina",
+      title: "Delete the bookmark?",
+      message: `${reason ? `${reason}\n\n` : ""}"${bookmark.name}" — ${bookmark.filePath}\n\nThe note will not be modified.`,
+      confirmLabel: "Delete",
       warning: true,
     });
     if (!ok) return;
     this.discardLive(id);
     if (this.manager.update((s) => deleteBookmark(s, id, nowIso()))) {
-      new Notice(`Bookmark "${bookmark.name}" eliminato.`);
+      new Notice(`Bookmark "${bookmark.name}" deleted.`);
     }
   }
 
@@ -535,21 +531,21 @@ export class BookmarkController {
   async copyToClipboard(text: string, label: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(text);
-      new Notice(`${label} copiato negli appunti.`);
+      new Notice(`${label} copied to the clipboard.`);
     } catch {
-      new Notice(`Impossibile accedere agli appunti. ${label}: ${text}`, 10000);
+      new Notice(`Cannot access the clipboard. ${label}: ${text}`, 10000);
     }
   }
 
-  /** Selettore rapido; senza argomenti apre il bookmark scelto. */
+  /** Quick switcher; with no arguments it opens the chosen bookmark. */
   openQuickSwitcher(
-    bookmarks: readonly LessonBookmark[] = this.store.bookmarks,
-    onChoose: (bookmark: LessonBookmark) => void = (b) => void this.goTo(b.id),
+    bookmarks: readonly Bookmark[] = this.store.bookmarks,
+    onChoose: (bookmark: Bookmark) => void = (b) => void this.goTo(b.id),
   ): void {
     new BookmarkSuggestModal(this.app, bookmarks, onChoose).open();
   }
 
-  // ---------------------------------------------------------------- eventi del vault
+  // ---------------------------------------------------------------- vault events
 
   onRename(oldPath: string, newPath: string): void {
     const affected = this.store.bookmarks.some(
@@ -558,12 +554,12 @@ export class BookmarkController {
     if (affected) this.manager.update((s) => relinkPaths(s, oldPath, newPath, nowIso()));
   }
 
-  /** Un file eliminato rende orfani i suoi bookmark: non vengono mai cancellati in automatico. */
+  /** A deleted file orphans its bookmarks: they are never deleted automatically. */
   onDelete(path: string): void {
     this.manager.update((s) => markDeletedPath(s, path, nowIso()));
   }
 
-  /** All'apertura di una nota verifica in silenzio i suoi bookmark e corregge gli offset. */
+  /** When a note opens, silently checks its bookmarks and fixes their offsets. */
   async verifyFile(file: TFile): Promise<void> {
     const bookmarks = this.store.bookmarks.filter((b) => b.filePath === file.path);
     if (bookmarks.length === 0) return;
@@ -585,14 +581,14 @@ export class BookmarkController {
     if (unresolved > 0 && !this.warnedFiles.has(file.path)) {
       this.warnedFiles.add(file.path);
       new Notice(
-        `${unresolved} bookmark di ${file.basename} non sono stati ritrovati con certezza: aprili dalla sidebar per correggerli.`,
+        `${unresolved} bookmark(s) in ${file.basename} could not be located with certainty: open them from the sidebar to fix them.`,
       );
     } else if (unresolved === 0) {
       this.warnedFiles.delete(file.path);
     }
   }
 
-  // ---------------------------------------------------------------- tracciamento in tempo reale
+  // ---------------------------------------------------------------- live tracking
 
   onDocChanged(filePath: string, changes: ChangeDesc, doc: Text): void {
     if (!this.settings.liveTracking) return;
@@ -600,7 +596,7 @@ export class BookmarkController {
     for (const bookmark of this.store.bookmarks) {
       if (bookmark.filePath !== filePath) continue;
       const base = this.liveOffsets.get(bookmark.id) ?? bookmark.position.offset;
-      // assoc -1: il testo digitato esattamente sul bookmark finisce dopo di esso.
+      // assoc -1: text typed exactly at the bookmark ends up after it.
       this.liveOffsets.set(bookmark.id, changes.mapPos(base, -1));
       touched = true;
     }
@@ -614,7 +610,7 @@ export class BookmarkController {
     this.liveOffsets.delete(id);
   }
 
-  /** Salva gli offset tracciati ricalcolando il contesto sul testo attuale. */
+  /** Saves the tracked offsets, recomputing the context on the current text. */
   async flushTracking(): Promise<void> {
     if (this.flushTimer !== null) {
       window.clearTimeout(this.flushTimer);

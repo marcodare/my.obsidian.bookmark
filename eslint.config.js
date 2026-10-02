@@ -12,7 +12,7 @@ export default tseslint.config(
     },
   },
   {
-    // Script Node da riga di comando: l'output su console è voluto.
+    // Command-line Node scripts: console output is intended.
     files: ["scripts/**/*.mjs"],
     languageOptions: { globals: { console: "readonly", process: "readonly" } },
     rules: { "no-console": "off" },

@@ -7,7 +7,7 @@ const MAX_LINE_TEXT = 300;
 const HEADING_RE = /^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$/;
 const FENCE_RE = /^[ \t]{0,3}(`{3,}|~{3,})/;
 
-/** Titoli che contengono `offset`, ignorando frontmatter e blocchi di codice. */
+/** Headings containing `offset`, ignoring frontmatter and code blocks. */
 export function extractHeadingPath(text: string, offset: number): string[] {
   const upTo = text.slice(0, clamp(offset, 0, text.length));
   const lines = upTo.split("\n");
@@ -41,7 +41,7 @@ export function extractHeadingPath(text: string, offset: number): string[] {
   return stack.map((h) => h.title);
 }
 
-/** Crea una posizione con contesto a partire dal testo del documento e da un offset. */
+/** Creates a position with context from the document text and an offset. */
 export function capturePosition(
   text: string,
   offset: number,
@@ -61,7 +61,7 @@ export function capturePosition(
   };
 }
 
-/** Aggiorna offset/riga/colonna mantenendo il contesto originale. */
+/** Updates offset/line/column while keeping the original context. */
 export function withOffset(
   text: string,
   position: BookmarkPosition,
@@ -72,7 +72,7 @@ export function withOffset(
   return { ...position, offset: safe, line, ch };
 }
 
-/** Testo breve da mostrare nella sidebar. */
+/** Short text shown in the sidebar. */
 export function previewOf(position: BookmarkPosition, maxLength = 120): string {
   const line = position.lineText.trim();
   const source =

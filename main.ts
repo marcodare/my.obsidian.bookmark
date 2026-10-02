@@ -1,20 +1,29 @@
 import { MarkdownView, normalizePath, Notice, Plugin, type WorkspaceLeaf } from "obsidian";
-import { BookmarkController, newId, PROTOCOL_ACTION } from "./src/controller";
+import {
+  BookmarkController,
+  LEGACY_PROTOCOL_ACTION,
+  newId,
+  PROTOCOL_ACTION,
+} from "./src/controller";
 import { highlightExtension } from "./src/editor/highlight";
 import { findTargetMarkdownView } from "./src/editor/location";
 import { trackingExtension } from "./src/editor/tracking";
-import { LessonBookmarksSettingTab } from "./src/settings";
+import { MyObsidianBookmarkSettingTab } from "./src/settings";
 import type { DataIO } from "./src/store/persistence";
 import { StoreManager } from "./src/store/StoreManager";
-import { BookmarkView, VIEW_TYPE_LESSON_BOOKMARKS } from "./src/view/BookmarkView";
+import { BookmarkView, VIEW_TYPE_BOOKMARKS } from "./src/view/BookmarkView";
 
-export default class LessonBookmarksPlugin extends Plugin {
+/** Plugin id before the rename; its data.json is imported once on first load. */
+const LEGACY_PLUGIN_ID = "lesson-bookmarks";
+
+export default class MyObsidianBookmarkPlugin extends Plugin {
   private manager!: StoreManager;
   private controller!: BookmarkController;
-  /** Pulsanti aggiunti nell'intestazione delle note, rimossi allo scaricamento del plugin. */
+  /** Buttons added to note headers, removed when the plugin unloads. */
   private readonly headerActions = new Map<MarkdownView, HTMLElement>();
 
   override async onload(): Promise<void> {
+    await this.importLegacyData();
     this.manager = new StoreManager({
       io: this.createDataIO(),
       clock: () => new Date().toISOString(),
@@ -25,7 +34,7 @@ export default class LessonBookmarksPlugin extends Plugin {
     this.controller = new BookmarkController(this.app, this.manager);
 
     this.registerView(
-      VIEW_TYPE_LESSON_BOOKMARKS,
+      VIEW_TYPE_BOOKMARKS,
       (leaf) => new BookmarkView(leaf, this.controller, this.manager),
     );
     this.registerEditorExtension([
@@ -33,13 +42,16 @@ export default class LessonBookmarksPlugin extends Plugin {
       trackingExtension((path, changes, doc) => this.controller.onDocChanged(path, changes, doc)),
     ]);
 
-    this.addRibbonIcon("bookmark", "Apri My Obsidian Bookmark", () => void this.activateView());
+    this.addRibbonIcon("bookmark", "Open My Obsidian Bookmark", () => void this.activateView());
     this.registerCommands();
     this.registerVaultEvents();
-    this.addSettingTab(new LessonBookmarksSettingTab(this.app, this, this.controller));
-    this.registerObsidianProtocolHandler(PROTOCOL_ACTION, (params) => {
-      if (params.id) void this.controller.goTo(params.id);
-    });
+    this.addSettingTab(new MyObsidianBookmarkSettingTab(this.app, this, this.controller));
+    // The legacy action keeps links copied before the rename working.
+    for (const action of [PROTOCOL_ACTION, LEGACY_PROTOCOL_ACTION]) {
+      this.registerObsidianProtocolHandler(action, (params) => {
+        if (params.id) void this.controller.goTo(params.id);
+      });
+    }
 
     this.app.workspace.onLayoutReady(() => {
       this.addHeaderActions();
@@ -55,14 +67,38 @@ export default class LessonBookmarksPlugin extends Plugin {
     await this.manager.flush();
   }
 
-  /** Chiamato da Obsidian quando data.json cambia sul disco (es. sincronizzazione). */
+  /** Called by Obsidian when data.json changes on disk (e.g. sync). */
   override async onExternalSettingsChange(): Promise<void> {
     await this.manager.reloadFromDisk();
   }
 
+  private pluginDir(): string {
+    return (
+      this.manifest.dir ?? normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`)
+    );
+  }
+
+  /** Copies data.json from the legacy plugin folder when this plugin has no data yet. */
+  private async importLegacyData(): Promise<void> {
+    const adapter = this.app.vault.adapter;
+    const target = normalizePath(`${this.pluginDir()}/data.json`);
+    const legacy = normalizePath(
+      `${this.app.vault.configDir}/plugins/${LEGACY_PLUGIN_ID}/data.json`,
+    );
+    try {
+      if ((await adapter.exists(target)) || !(await adapter.exists(legacy))) return;
+      await adapter.write(target, await adapter.read(legacy));
+      new Notice(`My Obsidian Bookmark: imported bookmarks from ${legacy}.`, 8000);
+    } catch (error) {
+      new Notice(
+        `My Obsidian Bookmark: could not import ${legacy} (${error instanceof Error ? error.message : error}).`,
+        10000,
+      );
+    }
+  }
+
   private createDataIO(): DataIO {
-    const dir =
-      this.manifest.dir ?? normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
+    const dir = this.pluginDir();
     const adapter = this.app.vault.adapter;
     const dataPath = normalizePath(`${dir}/data.json`);
     return {
@@ -77,7 +113,7 @@ export default class LessonBookmarksPlugin extends Plugin {
   private registerCommands(): void {
     this.addCommand({
       id: "add-bookmark",
-      name: "Aggiungi bookmark alla posizione corrente",
+      name: "Add bookmark at current position",
       icon: "bookmark-plus",
       checkCallback: (checking) => {
         const view = findTargetMarkdownView(this.app);
@@ -89,7 +125,7 @@ export default class LessonBookmarksPlugin extends Plugin {
 
     this.addCommand({
       id: "update-bookmark-here",
-      name: "Aggiorna un bookmark di questa nota alla posizione corrente",
+      name: "Update a bookmark of this note to the current position",
       icon: "locate",
       checkCallback: (checking) => {
         const view = findTargetMarkdownView(this.app);
@@ -110,14 +146,14 @@ export default class LessonBookmarksPlugin extends Plugin {
 
     this.addCommand({
       id: "open-view",
-      name: "Apri pannello",
+      name: "Open panel",
       icon: "bookmark",
       callback: () => void this.activateView(),
     });
 
     this.addCommand({
       id: "go-to-bookmark",
-      name: "Vai a un bookmark…",
+      name: "Go to bookmark…",
       icon: "search",
       callback: () => this.controller.openQuickSwitcher(),
     });
@@ -137,7 +173,7 @@ export default class LessonBookmarksPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.addHeaderActions()));
   }
 
-  /** Pulsante "nuovo bookmark" nell'intestazione di ogni nota (desktop e mobile). */
+  /** "New bookmark" button in every note header (desktop and mobile). */
   private addHeaderActions(): void {
     for (const [view, el] of this.headerActions) {
       if (!view.containerEl.isConnected) {
@@ -150,7 +186,7 @@ export default class LessonBookmarksPlugin extends Plugin {
       if (!(view instanceof MarkdownView) || this.headerActions.has(view)) return;
       const action = view.addAction(
         "bookmark-plus",
-        "Aggiungi bookmark",
+        "Add bookmark",
         () => void this.controller.createAtCurrentPosition(view),
       );
       this.headerActions.set(view, action);
@@ -159,10 +195,9 @@ export default class LessonBookmarksPlugin extends Plugin {
 
   async activateView(): Promise<void> {
     const { workspace } = this.app;
-    const existing = workspace.getLeavesOfType(VIEW_TYPE_LESSON_BOOKMARKS)[0];
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_BOOKMARKS)[0];
     const leaf =
-      existing ??
-      (await workspace.ensureSideLeaf(VIEW_TYPE_LESSON_BOOKMARKS, "right", { active: true }));
+      existing ?? (await workspace.ensureSideLeaf(VIEW_TYPE_BOOKMARKS, "right", { active: true }));
     await workspace.revealLeaf(leaf);
   }
 }

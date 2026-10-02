@@ -1,179 +1,187 @@
 # My Obsidian Bookmark
 
-Plugin Obsidian per creare **bookmark nominati su posizioni precise** dentro le note Markdown
-(es. «Policy routing» alla riga 42 di `Linux/modulo00/lezione01/lesson.md`), senza mai
-modificare le note. I bookmark compaiono in una sidebar a destra, raggruppati per percorso.
+Obsidian plugin for **named bookmarks at precise positions** inside Markdown notes
+(e.g. “Policy routing” at line 42 of `Linux/modulo00/lezione01/lesson.md`), without ever
+modifying the notes. Bookmarks appear in a right sidebar, grouped by path, and can carry a
+free-form note.
 
-- Completamente locale: nessuna richiesta di rete, telemetria o servizio esterno.
-- Dati in `.obsidian/plugins/lesson-bookmarks/data.json` (formato versionato).
-- Desktop, iPadOS e iOS.
+- Fully local: no network requests, telemetry or external services.
+- Data in `.obsidian/plugins/my-obsidian-bookmark/data.json` (versioned format).
+- Desktop, iPadOS and iOS.
 
-## Installazione
+## Installation
 
-Requisiti di sviluppo: Node.js ≥ 20.12 e pnpm.
+Development requirements: Node.js ≥ 21.2 and pnpm (version pinned in `package.json`;
+`corepack enable` sets it up).
 
-1. Indica il vault in `.env` (non versionato; parti da `.env.example`):
+1. Point `.env` at your vault (not versioned; start from `.env.example`):
 
    ```bash
    cp .env.example .env
-   # OBSIDIAN_VAULT_PATH=/percorso/assoluto/del/vault   (la cartella che contiene .obsidian/)
+   # OBSIDIAN_VAULT_PATH=/absolute/path/to/vault   (the folder that contains .obsidian/)
    ```
 
-2. Installa le dipendenze, compila e copia nel vault:
+2. Install dependencies, build and copy into the vault:
 
    ```bash
    pnpm install
    pnpm run install:vault
    ```
 
-   Lo script esegue la build e copia `main.js`, `manifest.json` e `styles.css` in
-   `<VAULT>/.obsidian/plugins/lesson-bookmarks/`. Se il percorso non contiene `.obsidian/` si
-   ferma con un errore, senza creare nulla.
+   The script builds and copies `main.js`, `manifest.json` and `styles.css` into
+   `<VAULT>/.obsidian/plugins/my-obsidian-bookmark/`. If the path has no `.obsidian/` it stops
+   with an error without creating anything.
 
-3. In Obsidian: _Impostazioni → Plugin della community_ → disattiva la modalità
-   provvisoria se richiesto → ricarica l'elenco → attiva **My Obsidian Bookmark**.
+3. In Obsidian: _Settings → Community plugins_ → turn off restricted mode if asked → reload the
+   list → enable **My Obsidian Bookmark**.
 
-**Installazione a mano** (senza `.env`): dopo `pnpm build` copia i tre file nella cartella
-`<VAULT>/.obsidian/plugins/lesson-bookmarks/`.
+**Manual install** (no `.env`): after `pnpm build`, copy the three files into
+`<VAULT>/.obsidian/plugins/my-obsidian-bookmark/`.
 
-Per gli aggiornamenti: `pnpm run install:vault` e poi ricarica il plugin. `data.json` non va mai
-copiato né cancellato: contiene i bookmark.
+To update: `pnpm run install:vault`, then reload the plugin. Never copy or delete `data.json`:
+it holds the bookmarks.
 
-Su iPhone/iPad il plugin arriva tramite la sincronizzazione del vault (Obsidian Sync, iCloud…),
-purché la sincronizzazione includa i plugin della community.
+On iPhone/iPad the plugin arrives through vault sync (Obsidian Sync, iCloud…), as long as sync
+includes community plugins.
 
-Requisito: Obsidian **1.7.2** o successivo.
+Requires Obsidian **1.7.2** or later.
 
-## Uso
+### Upgrading from `lesson-bookmarks`
 
-| Azione               | Come                                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Creare un bookmark   | Pulsante 🔖+ nell'intestazione della nota, comando «Aggiungi bookmark alla posizione corrente», pulsante + nella sidebar |
-| Aprire la sidebar    | Icona 🔖 nella barra laterale (ribbon) o comando «Apri pannello»                                                         |
-| Andare a un bookmark | Clic nella sidebar, oppure comando «Vai a un bookmark…»                                                                  |
-| Rinominare           | Doppio clic sul nome, F2, oppure menu → Rinomina                                                                         |
-| Altre azioni         | Clic destro o pulsante `⋯` sul bookmark                                                                                  |
+Earlier builds used the plugin id `lesson-bookmarks`. On first load, if
+`my-obsidian-bookmark/data.json` does not exist yet, the plugin copies
+`.obsidian/plugins/lesson-bookmarks/data.json` over and shows a notice. Then disable and delete
+the old `lesson-bookmarks` plugin. Links copied earlier (`obsidian://lesson-bookmarks?…`) keep
+working.
 
-Menu del bookmark: Vai al bookmark · Aggiorna alla posizione corrente · Rinomina · Duplica ·
-Sposta su/giù (ordinamento manuale) · Apri nota · Copia link · Copia percorso · Mostra dettagli ·
-Elimina.
+## Usage
 
-**Ricerca:** testo libero (nome, percorso, anteprima; senza distinzione di maiuscole/accenti),
-oppure `name:"da verificare"` e `path:linux` (alias `nome:` e `file:`). I termini sono in AND.
+| Action            | How                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| Create a bookmark | 🔖+ button in the note header, “Add bookmark at current position” command, + in sidebar |
+| Open the sidebar  | 🔖 ribbon icon or the “Open panel” command                                              |
+| Go to a bookmark  | Click it in the sidebar, or the “Go to bookmark…” command                               |
+| Rename            | Double-click the name, F2, or menu → Edit name and note                                 |
+| Move here         | In the “New bookmark” dialog, click an existing bookmark of the same branch to move it  |
+| More actions      | Right-click or the `⋯` button on the bookmark                                           |
 
-**Raggruppamento** (pulsante nella sidebar o impostazioni): percorso ad albero (predefinito),
-percorso completo, cartella principale, nome file, data di modifica, nessuno.
+Bookmark menu: Go to bookmark · Update to current position · Edit name and note · Duplicate ·
+Move up/down (manual order) · Open note · Copy link · Copy path · Show details · Delete.
 
-**Copia link** produce `obsidian://lesson-bookmarks?vault=…&id=…`: incollato in una nota o
-aperto dal browser, porta direttamente alla posizione del bookmark.
+**Search:** free text (name, path, preview and note; case- and accent-insensitive), or
+`name:"to review"` and `path:linux` (alias `file:`). Terms are combined with AND.
 
-### Nomi duplicati
+**Grouping** (sidebar button or settings): path tree (default), full path, top-level folder,
+file name, modified date, none.
 
-Il nome identifica il bookmark all'interno della nota (senza distinzione di maiuscole/minuscole).
-Se crei un bookmark con un nome già usato nella stessa nota, il plugin propone di aggiornare
-quello esistente alla posizione corrente.
+**Copy link** produces `obsidian://my-obsidian-bookmark?vault=…&id=…`: pasted into a note or
+opened from a browser, it jumps straight to the bookmark position.
 
-## Come viene ritrovata la posizione
+### Duplicate names
 
-Per ogni bookmark vengono salvati riga, colonna, offset, ~64 caratteri prima e dopo, la riga
-intera e i titoli che la contengono (`# Routing › ## Policy routing`).
+A name identifies the bookmark within its note (case-insensitive). Creating a bookmark with a
+name already used in the same note offers to move the existing one to the current position.
 
-1. **Tracciamento in tempo reale** (disattivabile): mentre scrivi in Obsidian, gli offset dei
-   bookmark della nota vengono spostati insieme al testo, e il contesto viene ricalcolato.
-2. **Recupero tramite contesto** (all'apertura della nota e al clic sul bookmark), utile quando
-   la nota è cambiata fuori da Obsidian o su un altro dispositivo:
-   1. verifica che il contesto salvato si trovi ancora nella posizione salvata;
-   2. altrimenti cerca il contesto completo, poi il solo testo precedente, poi il solo testo
-      successivo, poi versioni corte (24 caratteri), poi la riga intera, anche tollerando
-      differenze di spazi e fine riga;
-   3. una corrispondenza viene accettata **solo se è unica** (eventualmente dopo il filtro per titoli);
-   4. se il testo compare in più punti, viene chiesto all'utente quale scegliere;
-   5. se non viene trovato, il bookmark **non viene spostato**: compare un avviso con le opzioni
-      «Apri alla riga salvata» e «Aggiorna alla posizione corrente».
+## How the position is found again
 
-Nella sidebar: ⚠ = posizione da verificare, icona rossa = file non trovato.
+Each bookmark stores line, column, offset, ~64 characters before and after, the whole line and
+the headings that contain it (`# Routing › ## Policy routing`).
 
-### File rinominati, spostati, eliminati
+1. **Live tracking** (can be turned off): while you type in Obsidian, the offsets of the note's
+   bookmarks move with the text and the context is recomputed.
+2. **Context recovery** (when the note opens and when a bookmark is clicked), useful when the
+   note changed outside Obsidian or on another device:
+   1. checks that the saved context is still at the saved position;
+   2. otherwise looks for the full context, then the preceding text alone, then the following
+      text alone, then short versions (24 characters), then the whole line, also tolerating
+      whitespace and line-ending differences;
+   3. a match is accepted **only if it is unique** (possibly after filtering by headings);
+   4. if the text occurs in several places, the user is asked to choose;
+   5. if it is not found, the bookmark **is not moved**: a notice offers “Open at the saved
+      line” and “Update to the current cursor position”.
 
-- Rinomina/spostamento di file o cartelle **dentro Obsidian**: i percorsi vengono aggiornati
-  automaticamente.
-- File eliminato: i bookmark diventano **orfani** e non vengono mai cancellati in automatico.
-- Aprendo un bookmark orfano (comportamento configurabile, predefinito «Chiedi») il plugin cerca
-  file con lo stesso nome che contengono il testo del bookmark, e su richiesta cerca in tutto il
-  vault; puoi ricollegare, mantenere come orfano o eliminare.
+In the sidebar: ⚠ = position needs checking, red icon = file not found.
 
-## Sincronizzazione e sicurezza dei dati
+### Renamed, moved, deleted files
 
-- Prima di ogni scrittura `data.json` viene riletto e unito ai dati in memoria: i bookmark creati
-  su un altro dispositivo non vengono persi.
-- Per lo stesso bookmark vince la modifica dell'utente più recente; le correzioni automatiche non
-  annullano mai una modifica fatta altrove.
-- Le eliminazioni sono registrate (per 90 giorni) per evitare che un dispositivo non aggiornato
-  faccia ricomparire bookmark eliminati.
-- Quando la sincronizzazione modifica `data.json` mentre Obsidian è aperto, il plugin ricarica e
-  aggiorna la sidebar (`onExternalSettingsChange`). Il pulsante ⟳ della sidebar forza la ricarica.
-- `data.json` danneggiato → copia in `data.corrupt-<data>.json`, avviso, ripartenza da vuoto.
-- Migrazione da un formato precedente → backup in `data.backup-v<N>-<data>.json` prima di salvare.
-- `data.json` scritto da una versione **più recente** del plugin → sola lettura, il file non
-  viene toccato finché non aggiorni il plugin.
+- Renaming/moving files or folders **inside Obsidian** updates the paths automatically.
+- Deleted file: its bookmarks become **orphaned** and are never deleted automatically.
+- Opening an orphaned bookmark (configurable, default “Ask”) looks for files with the same name
+  containing the bookmark text, and on request searches the whole vault; you can relink, keep it
+  as orphan or delete it.
+
+## Sync and data safety
+
+- Before every write `data.json` is re-read and merged with the in-memory data: bookmarks
+  created on another device are not lost.
+- For the same bookmark the most recent user change wins; automatic fixes never undo a change
+  made elsewhere.
+- Deletions are recorded (for 90 days) so an outdated device cannot bring deleted bookmarks back.
+- When sync changes `data.json` while Obsidian is open, the plugin reloads and refreshes the
+  sidebar (`onExternalSettingsChange`). The sidebar ⟳ button forces a reload.
+- Corrupt `data.json` → copy in `data.corrupt-<date>.json`, notice, start from empty.
+- Migration from an older format → backup in `data.backup-v<N>-<date>.json` before saving.
+- `data.json` written by a **newer** plugin version → read-only; the file is left untouched until
+  you update the plugin.
 
 ## Mobile (iOS / iPadOS)
 
-| Funzione                                    | Stato                                                                                                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Creazione da cursore (editing/Live Preview) | ✅                                                                                                                                                           |
-| Pulsante 🔖+ nell'intestazione della nota   | ✅                                                                                                                                                           |
-| **Toolbar mobile**                          | ⚙ Un plugin non può aggiungersi da solo: _Impostazioni → Mobile → Gestisci toolbar_ → aggiungi «My Obsidian Bookmark: Aggiungi bookmark alla posizione corrente» |
-| Sidebar destra                              | ✅ (scorri da destra o comando «Apri pannello»)                                                                                                              |
-| Menu contestuale                            | ✅ pulsante `⋯` sempre visibile (il long-press può variare tra versioni)                                                                                     |
-| Riordino                                    | ✅ «Sposta su/giù» dal menu. Il drag & drop è solo desktop                                                                                                   |
-| Rinomina                                    | ✅ menu → Rinomina (il doppio tocco non è affidabile su touch)                                                                                               |
-| Tooltip con i dettagli                      | ⚠ niente hover su touch → menu → Mostra dettagli                                                                                                             |
+| Feature                                   | Status                                                                                                                            |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Create from cursor (editing/Live Preview) | ✅                                                                                                                                |
+| 🔖+ button in the note header             | ✅                                                                                                                                |
+| **Mobile toolbar**                        | ⚙ A plugin cannot add itself: _Settings → Mobile → Manage toolbar_ → add “My Obsidian Bookmark: Add bookmark at current position” |
+| Right sidebar                             | ✅ (swipe from the right or the “Open panel” command)                                                                             |
+| Context menu                              | ✅ `⋯` button always visible (long-press may vary across versions)                                                                |
+| Reordering                                | ✅ “Move up/down” from the menu. Drag & drop is desktop only                                                                      |
+| Rename                                    | ✅ menu → Edit name and note (double-tap is unreliable on touch)                                                                  |
+| Details tooltip                           | ⚠ no hover on touch → menu → Show details                                                                                         |
 
-## Limiti noti
+## Known limitations
 
-- **Modalità lettura:** non esiste un cursore. Il bookmark viene creato sulla prima riga di testo
-  visibile (il modal lo segnala) e la navigazione scorre fino alla riga senza evidenziarla.
-  Per una posizione precisa usa la modalità editing/Live Preview.
-- **Rinomina fatta fuori da Obsidian** (Finder, git, altro dispositivo senza il plugin):
-  appare come eliminazione + creazione; il bookmark diventa orfano e va ricollegato (il plugin
-  propone i candidati). Se la rinomina avviene su un altro dispositivo con il plugin attivo, il
-  nuovo percorso arriva con la sincronizzazione di `data.json`.
-- **Conflitti del servizio di sync:** se il servizio crea copie di conflitto di `data.json`
-  (es. `data 2.json` su iCloud), queste non vengono unite automaticamente.
-- Il tracciamento in tempo reale segue solo l'editor con il focus. Le modifiche fatte da altri
-  plugin in un editor senza focus vengono gestite dal recupero tramite contesto.
+- **Reading view:** there is no cursor. The bookmark is created on the first visible line of
+  text (the dialog says so) and navigation scrolls to the line without highlighting it. For a
+  precise position use editing/Live Preview.
+- **Renames done outside Obsidian** (Finder, git, another device without the plugin): they look
+  like delete + create; the bookmark becomes orphaned and must be relinked (the plugin suggests
+  candidates). If the rename happens on another device with the plugin enabled, the new path
+  arrives with the `data.json` sync.
+- **Sync service conflicts:** if the service creates conflict copies of `data.json`
+  (e.g. `data 2.json` on iCloud), they are not merged automatically.
+- Live tracking follows only the focused editor. Changes made by other plugins in an unfocused
+  editor are handled by context recovery.
 
-## Sviluppo
+## Development
 
 ```bash
 pnpm install
-pnpm dev                 # watch mode; se .env indica un vault, copia lì ogni rebuild
-pnpm build               # tsc --noEmit + bundle di produzione
-pnpm run install:vault   # build + copia nel vault di .env
-pnpm test                # test unitari (vitest)
+pnpm dev                 # watch mode; copies every rebuild into the vault if .env is set
+pnpm build               # tsc --noEmit + production bundle
+pnpm run install:vault   # build + copy into the .env vault
+pnpm test                # unit tests (vitest)
 pnpm lint                # eslint
+pnpm format              # prettier
 ```
 
-Con `pnpm dev` e `OBSIDIAN_VAULT_PATH` impostata, ogni salvataggio ricompila e aggiorna il
-plugin nel vault. Il plugin [Hot Reload](https://github.com/pjeby/hot-reload) lo ricarica in
-automatico in Obsidian. Una variabile già presente nell'ambiente ha la precedenza su `.env`.
+With `pnpm dev` and `OBSIDIAN_VAULT_PATH` set, every save rebuilds and updates the plugin in the
+vault. The [Hot Reload](https://github.com/pjeby/hot-reload) plugin reloads it in Obsidian
+automatically. A variable already set in the environment takes precedence over `.env`.
 
-### Struttura
+### Layout
 
 ```
-main.ts                  registrazione: comandi, vista, eventi, impostazioni
-src/types.ts             tipi e impostazioni predefinite
-src/anchor/              cattura e recupero della posizione (puro, testato)
-src/store/               operazioni, migrazioni, schema zod, persistenza, StoreManager (puro, testato)
-src/view/                sidebar, raggruppamento e ricerca (puri), modal
-src/editor/              estensioni CodeMirror (evidenziazione, tracciamento), navigazione
-src/controller.ts        flussi utente (crea, vai, aggiorna, ricollega, elimina)
-tests/                   test vitest
-scripts/                 copia nel vault (install:vault, pnpm dev)
+main.ts                  registration: commands, view, events, settings, legacy import
+src/types.ts             types and default settings
+src/anchor/              position capture and recovery (pure, tested)
+src/store/               operations, migrations, zod schema, persistence, StoreManager (pure, tested)
+src/view/                sidebar, grouping and search (pure), modals
+src/editor/              CodeMirror extensions (highlight, tracking), navigation
+src/controller.ts        user flows (create, go to, update, relink, delete)
+tests/                   vitest tests
+scripts/                 vault install (install:vault, pnpm dev)
 ```
 
-### Formato di `data.json` (v1)
+### `data.json` format (v1)
 
 ```jsonc
 {
@@ -183,6 +191,7 @@ scripts/                 copia nel vault (install:vault, pnpm dev)
       "id": "uuid",
       "filePath": "Linux/modulo00/lezione01/lesson.md",
       "name": "Policy routing",
+      "note": "optional free text",
       "position": {
         "line": 41,
         "ch": 12,
@@ -196,8 +205,8 @@ scripts/                 copia nel vault (install:vault, pnpm dev)
       "order": 0,
       "status": "ok", // ok | orphan | unresolved
       "createdAt": "…",
-      "updatedAt": "…", // updatedAt = ultima modifica dell'utente
-      "revisedAt": "…", // ultima modifica di qualsiasi tipo (sync)
+      "updatedAt": "…", // last user change
+      "revisedAt": "…", // last change of any kind (sync)
     },
   ],
   "tombstones": [{ "id": "…", "deletedAt": "…" }],
@@ -205,5 +214,9 @@ scripts/                 copia nel vault (install:vault, pnpm dev)
 }
 ```
 
-Per un nuovo formato: incrementa `CURRENT_STORE_VERSION` in `src/types.ts` e aggiungi il passo in
-`src/store/migrations.ts`. Il backup del file precedente è automatico.
+For a new format: bump `CURRENT_STORE_VERSION` in `src/types.ts` and add the step in
+`src/store/migrations.ts`. The previous file is backed up automatically.
+
+## License
+
+MIT — see `LICENSE`.

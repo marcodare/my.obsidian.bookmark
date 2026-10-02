@@ -2,11 +2,11 @@ import type {
   BookmarkPosition,
   BookmarkStatus,
   BookmarkStore,
-  LessonBookmark,
-  LessonBookmarksSettings,
+  Bookmark,
+  MyObsidianBookmarkSettings,
 } from "../types";
 
-/** Operazioni immutabili sullo store. Ogni funzione restituisce un nuovo store. */
+/** Immutable store operations. Every function returns a new store. */
 
 export interface NewBookmarkInput {
   readonly filePath: string;
@@ -23,8 +23,8 @@ export function normalizeNote(note: string): string {
   return note.replace(/\r\n?/g, "\n").trim();
 }
 
-/** Imposta la nota sul bookmark, rimuovendo il campo se è vuota. */
-function withNote(bookmark: LessonBookmark, note: string | undefined): LessonBookmark {
+/** Sets the bookmark note, removing the field when empty. */
+function withNote(bookmark: Bookmark, note: string | undefined): Bookmark {
   const clean = normalizeNote(note ?? "");
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { note: _previous, ...rest } = bookmark;
@@ -37,17 +37,17 @@ function sameName(a: string, b: string): boolean {
   );
 }
 
-export function getBookmark(store: BookmarkStore, id: string): LessonBookmark | undefined {
+export function getBookmark(store: BookmarkStore, id: string): Bookmark | undefined {
   return store.bookmarks.find((b) => b.id === id);
 }
 
-/** Bookmark con lo stesso nome (senza distinzione maiuscole/minuscole) nello stesso file. */
+/** Bookmark with the same name (case-insensitive) in the same file. */
 export function findByFileAndName(
   store: BookmarkStore,
   filePath: string,
   name: string,
   excludeId?: string,
-): LessonBookmark | undefined {
+): Bookmark | undefined {
   return store.bookmarks.find(
     (b) => b.filePath === filePath && b.id !== excludeId && sameName(b.name, name),
   );
@@ -60,9 +60,9 @@ function nextOrder(store: BookmarkStore): number {
 function replaceBookmark(
   store: BookmarkStore,
   id: string,
-  update: (b: LessonBookmark) => LessonBookmark,
+  update: (b: Bookmark) => Bookmark,
 ): BookmarkStore {
-  if (!getBookmark(store, id)) throw new Error(`Bookmark ${id} non trovato`);
+  if (!getBookmark(store, id)) throw new Error(`Bookmark ${id} not found`);
   return { ...store, bookmarks: store.bookmarks.map((b) => (b.id === id ? update(b) : b)) };
 }
 
@@ -71,9 +71,9 @@ export function createBookmark(
   input: NewBookmarkInput,
   now: string,
   id: string,
-): { store: BookmarkStore; bookmark: LessonBookmark } {
+): { store: BookmarkStore; bookmark: Bookmark } {
   const name = normalizeName(input.name);
-  if (name.length === 0) throw new Error("Il nome del bookmark non può essere vuoto");
+  if (name.length === 0) throw new Error("The bookmark name cannot be empty");
   const bookmark = withNote(
     {
       id,
@@ -98,11 +98,11 @@ export function renameBookmark(
   now: string,
 ): BookmarkStore {
   const clean = normalizeName(name);
-  if (clean.length === 0) throw new Error("Il nome del bookmark non può essere vuoto");
+  if (clean.length === 0) throw new Error("The bookmark name cannot be empty");
   return replaceBookmark(store, id, (b) => ({ ...b, name: clean, updatedAt: now, revisedAt: now }));
 }
 
-/** Nome e nota modificati dall'utente. */
+/** Name and note edited by the user. */
 export function editBookmark(
   store: BookmarkStore,
   id: string,
@@ -110,13 +110,13 @@ export function editBookmark(
   now: string,
 ): BookmarkStore {
   const name = normalizeName(changes.name);
-  if (name.length === 0) throw new Error("Il nome del bookmark non può essere vuoto");
+  if (name.length === 0) throw new Error("The bookmark name cannot be empty");
   return replaceBookmark(store, id, (b) =>
     withNote({ ...b, name, updatedAt: now, revisedAt: now }, changes.note),
   );
 }
 
-/** Nuova posizione scelta dall'utente (eventualmente in un altro file). */
+/** New position chosen by the user (possibly in another file). */
 export function updateBookmarkPosition(
   store: BookmarkStore,
   id: string,
@@ -135,8 +135,8 @@ export function updateBookmarkPosition(
 }
 
 /**
- * Correzione automatica (recupero tramite contesto, tracciamento delle modifiche):
- * non cambia `updatedAt`, che riflette solo le azioni dell'utente.
+ * Automatic fix (context recovery, edit tracking):
+ * does not change `updatedAt`, which only reflects user actions.
  */
 export function healBookmarkPosition(
   store: BookmarkStore,
@@ -166,12 +166,12 @@ export function deleteBookmark(store: BookmarkStore, id: string, now: string): B
   };
 }
 
-/** Nome libero nella forma "Nome (copia)", "Nome (copia 2)", ... */
+/** Free name in the form "Name (copy)", "Name (copy 2)", ... */
 export function duplicateName(store: BookmarkStore, filePath: string, name: string): string {
-  const base = `${name} (copia)`;
+  const base = `${name} (copy)`;
   if (!findByFileAndName(store, filePath, base)) return base;
   for (let n = 2; ; n++) {
-    const candidate = `${name} (copia ${n})`;
+    const candidate = `${name} (copy ${n})`;
     if (!findByFileAndName(store, filePath, candidate)) return candidate;
   }
 }
@@ -181,10 +181,10 @@ export function duplicateBookmark(
   id: string,
   now: string,
   newId: string,
-): { store: BookmarkStore; bookmark: LessonBookmark } {
+): { store: BookmarkStore; bookmark: Bookmark } {
   const source = getBookmark(store, id);
-  if (!source) throw new Error(`Bookmark ${id} non trovato`);
-  const copy: LessonBookmark = {
+  if (!source) throw new Error(`Bookmark ${id} not found`);
+  const copy: Bookmark = {
     ...source,
     id: newId,
     name: duplicateName(store, source.filePath, source.name),
@@ -197,11 +197,11 @@ export function duplicateBookmark(
   return { store: normalizeOrder(withCopy, now), bookmark: copy };
 }
 
-function byOrder(a: LessonBookmark, b: LessonBookmark): number {
+function byOrder(a: Bookmark, b: Bookmark): number {
   return a.order - b.order || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 }
 
-/** Riassegna gli ordini come 0..n-1 mantenendo la sequenza attuale. */
+/** Reassigns orders as 0..n-1 keeping the current sequence. */
 export function normalizeOrder(store: BookmarkStore, now: string): BookmarkStore {
   const sorted = [...store.bookmarks].sort(byOrder);
   const orders = new Map(sorted.map((b, i) => [b.id, i]));
@@ -215,8 +215,8 @@ export function normalizeOrder(store: BookmarkStore, now: string): BookmarkStore
 }
 
 /**
- * Applica una nuova sequenza a un sottoinsieme di bookmark (es. quelli di un gruppo),
- * riutilizzando gli slot d'ordine già occupati da quel sottoinsieme.
+ * Applies a new sequence to a subset of bookmarks (e.g. those of a group),
+ * reusing the order slots already taken by that subset.
  */
 export function reorderBookmarks(
   store: BookmarkStore,
@@ -225,7 +225,7 @@ export function reorderBookmarks(
 ): BookmarkStore {
   const members = newSequence
     .map((id) => getBookmark(store, id))
-    .filter((b): b is LessonBookmark => b !== undefined);
+    .filter((b): b is Bookmark => b !== undefined);
   const slots = members.map((b) => b.order).sort((a, b) => a - b);
   const assigned = new Map(members.map((b, i) => [b.id, slots[i] as number]));
   const reordered: BookmarkStore = {
@@ -238,7 +238,7 @@ export function reorderBookmarks(
   return normalizeOrder(reordered, now);
 }
 
-/** Sposta un bookmark di una posizione su (-1) o giù (+1) all'interno di `peers`. */
+/** Moves a bookmark one step up (-1) or down (+1) within `peers`. */
 export function moveBookmark(
   store: BookmarkStore,
   id: string,
@@ -255,7 +255,7 @@ export function moveBookmark(
   return reorderBookmarks(store, sequence, now);
 }
 
-/** Sposta `id` immediatamente prima di `beforeId` all'interno di `peers` (drag & drop). */
+/** Moves `id` right before `beforeId` within `peers` (drag & drop). */
 export function moveBookmarkBefore(
   store: BookmarkStore,
   id: string,
@@ -271,7 +271,7 @@ export function moveBookmarkBefore(
   return reorderBookmarks(store, sequence, now);
 }
 
-/** Gestisce la rinomina/lo spostamento di un file o di una cartella. */
+/** Handles renaming/moving a file or folder. */
 export function relinkPaths(
   store: BookmarkStore,
   oldPath: string,
@@ -292,7 +292,7 @@ export function relinkPaths(
   return changed ? { ...store, bookmarks } : store;
 }
 
-/** Ricollega un singolo bookmark orfano a un altro file. */
+/** Relinks a single orphaned bookmark to another file. */
 export function relinkBookmark(
   store: BookmarkStore,
   id: string,
@@ -303,7 +303,7 @@ export function relinkBookmark(
   return updateBookmarkPosition(store, id, filePath, position, now);
 }
 
-/** Segna come orfani i bookmark del file (o della cartella) eliminato. */
+/** Marks the bookmarks of the deleted file (or folder) as orphaned. */
 export function markDeletedPath(store: BookmarkStore, path: string, now: string): BookmarkStore {
   const prefix = `${path}/`;
   let changed = false;
@@ -317,7 +317,7 @@ export function markDeletedPath(store: BookmarkStore, path: string, now: string)
 
 export function updateSettings(
   store: BookmarkStore,
-  patch: Partial<LessonBookmarksSettings>,
+  patch: Partial<MyObsidianBookmarkSettings>,
 ): BookmarkStore {
   return { ...store, settings: { ...store.settings, ...patch } };
 }

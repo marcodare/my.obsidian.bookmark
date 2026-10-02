@@ -1,9 +1,4 @@
-import {
-  CURRENT_STORE_VERSION,
-  type BookmarkStore,
-  type LessonBookmark,
-  type Tombstone,
-} from "../types";
+import { CURRENT_STORE_VERSION, type BookmarkStore, type Bookmark, type Tombstone } from "../types";
 import {
   bookmarkSchema,
   legacyV0Schema,
@@ -19,19 +14,19 @@ export class InvalidDataError extends Error {
   }
 }
 
-/** data.json scritto da una versione più recente del plugin: non va sovrascritto. */
+/** data.json written by a newer plugin version: it must not be overwritten. */
 export class UnsupportedVersionError extends Error {
   constructor(readonly version: number) {
-    super(`data.json usa il formato v${version}, non supportato da questa versione del plugin`);
+    super(`data.json uses format v${version}, not supported by this plugin version`);
     this.name = "UnsupportedVersionError";
   }
 }
 
 export interface MigrationResult {
   readonly store: BookmarkStore;
-  /** Versione di partenza se è stata applicata una migrazione, altrimenti null. */
+  /** Source version when a migration was applied, otherwise null. */
   readonly migratedFrom: number | null;
-  /** Voci scartate perché non valide. */
+  /** Entries dropped because they were invalid. */
   readonly droppedEntries: number;
 }
 
@@ -42,19 +37,19 @@ export interface MigrationContext {
 
 function detectVersion(raw: unknown): number {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    throw new InvalidDataError("data.json non contiene un oggetto");
+    throw new InvalidDataError("data.json does not contain an object");
   }
   const version = (raw as { version?: unknown }).version;
   if (version === undefined) return 0;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 0) {
-    throw new InvalidDataError("campo version non valido");
+    throw new InvalidDataError("invalid version field");
   }
   return version;
 }
 
 function migrateV0(raw: unknown, ctx: MigrationContext): { data: unknown; dropped: number } {
   const parsed = legacyV0Schema.safeParse(raw);
-  if (!parsed.success) throw new InvalidDataError("formato v0 non riconosciuto");
+  if (!parsed.success) throw new InvalidDataError("unrecognized v0 format");
   let dropped = 0;
   const bookmarks = parsed.data.bookmarks.flatMap((old, index) => {
     const filePath = old.filePath ?? old.file;
@@ -64,7 +59,7 @@ function migrateV0(raw: unknown, ctx: MigrationContext): { data: unknown; droppe
     }
     const createdAt = old.createdAt ?? ctx.now;
     const updatedAt = old.updatedAt ?? createdAt;
-    const bookmark: LessonBookmark = {
+    const bookmark: Bookmark = {
       id: old.id ?? ctx.newId(),
       filePath,
       name: old.name,
@@ -91,10 +86,10 @@ function migrateV0(raw: unknown, ctx: MigrationContext): { data: unknown; droppe
 
 function parseV1(raw: unknown): { store: BookmarkStore; dropped: number } {
   const envelope = storeV1Envelope.safeParse(raw);
-  if (!envelope.success) throw new InvalidDataError("struttura di data.json non valida");
+  if (!envelope.success) throw new InvalidDataError("invalid data.json structure");
 
   let dropped = 0;
-  const bookmarks: LessonBookmark[] = [];
+  const bookmarks: Bookmark[] = [];
   const seen = new Set<string>();
   for (const entry of envelope.data.bookmarks) {
     const parsed = bookmarkSchema.safeParse(entry);
@@ -114,8 +109,8 @@ function parseV1(raw: unknown): { store: BookmarkStore; dropped: number } {
 }
 
 /**
- * Converte qualsiasi versione supportata di data.json nel formato corrente.
- * Lancia InvalidDataError se i dati sono illeggibili, UnsupportedVersionError se sono troppo nuovi.
+ * Converts any supported data.json version to the current format.
+ * Throws InvalidDataError when the data is unreadable, UnsupportedVersionError when it is too new.
  */
 export function migrate(raw: unknown, ctx: MigrationContext): MigrationResult {
   const from = detectVersion(raw);
@@ -128,7 +123,7 @@ export function migrate(raw: unknown, ctx: MigrationContext): MigrationResult {
     data = step.data;
     dropped += step.dropped;
   }
-  // Le migrazioni future vanno aggiunte qui in sequenza: if (version === 1) { ... }
+  // Add future migrations here, in sequence: if (version === 1) { ... }
 
   const parsed = parseV1(data);
   return {

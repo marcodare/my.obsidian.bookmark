@@ -5,12 +5,12 @@ import { flashOffset } from "./highlight";
 
 function leafShowsFile(leaf: WorkspaceLeaf, path: string): boolean {
   if (leaf.view instanceof MarkdownView) return leaf.view.file?.path === path;
-  // Foglia differita (in background, non ancora caricata).
+  // Deferred leaf (in the background, not loaded yet).
   const state = leaf.getViewState().state as { file?: unknown } | undefined;
   return state?.file === path;
 }
 
-/** Apre il file riusando una tab che lo mostra già; altrimenti segue `openMode`. */
+/** Opens the file reusing a tab that already shows it; otherwise follows `openMode`. */
 export async function openMarkdownFile(
   app: App,
   file: TFile,
@@ -27,7 +27,7 @@ export async function openMarkdownFile(
   return leaf.view instanceof MarkdownView ? leaf.view : null;
 }
 
-/** Testo attuale del documento aperto nella vista. */
+/** Current text of the document open in the view. */
 export function viewText(view: MarkdownView): string {
   return normalizeNewlines(
     view.getMode() === "source" ? view.editor.getValue() : view.getViewData(),
@@ -39,7 +39,7 @@ export interface RevealOptions {
   readonly highlightDurationMs: number;
 }
 
-/** Porta cursore e scroll sull'offset; in modalità lettura scorre alla riga. */
+/** Moves cursor and scroll to the offset; in reading view scrolls to the line. */
 export function revealOffset(
   view: MarkdownView,
   text: string,
@@ -55,7 +55,7 @@ export function revealOffset(
     if (options.highlight)
       flashOffset(editor, editor.posToOffset(pos), options.highlightDurationMs);
   } else {
-    // In lettura non c'è cursore: Obsidian scorre alla riga indicata.
+    // Reading view has no cursor: Obsidian scrolls to the given line.
     view.setEphemeralState({ line: pos.line });
   }
 }

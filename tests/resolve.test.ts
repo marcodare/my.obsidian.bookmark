@@ -11,13 +11,13 @@ function bookmarkAt(text: string, marker: string): BookmarkPosition {
   return capturePosition(text, offsetAfter(text, marker), "editor");
 }
 
-/** Offset atteso nel nuovo testo: subito dopo lo stesso marker. */
+/** Expected offset in the new text: right after the same marker. */
 function expected(text: string, marker = MARKER): number {
   return offsetAfter(text, marker);
 }
 
 describe("capturePosition", () => {
-  it("salva riga, colonna, contesto e titoli", () => {
+  it("stores line, column, context and headings", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     expect(pos.line).toBe(offsetToPos(LESSON, pos.offset).line);
     expect(pos.contextBefore.endsWith(MARKER)).toBe(true);
@@ -26,26 +26,26 @@ describe("capturePosition", () => {
     expect(pos.headingPath).toEqual(["Routing", "Policy routing"]);
   });
 
-  it("ignora titoli dentro blocchi di codice e frontmatter", () => {
+  it("ignores headings inside code blocks and frontmatter", () => {
     const text = "---\ntitle: x\n---\n# A\n```\n# non titolo\n```\n## B\ntesto";
     expect(extractHeadingPath(text, text.length)).toEqual(["A", "B"]);
   });
 });
 
 describe("resolvePosition", () => {
-  it("riconosce la posizione esatta", () => {
+  it("recognizes the exact position", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     expect(resolvePosition(LESSON, pos)).toEqual({ kind: "exact", offset: pos.offset });
   });
 
-  it("recupera la posizione se il testo prima del bookmark è cambiato", () => {
+  it("recovers the position when the text before the bookmark changed", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const edited = LESSON.replace("Il routing statico", "Il routing statico (configurato a mano)");
     const result = resolvePosition(edited, pos);
     expect(result).toEqual({ kind: "relocated", offset: expected(edited), method: "context" });
   });
 
-  it("recupera la posizione dopo inserimento di righe", () => {
+  it("recovers the position after lines are inserted", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const edited = LESSON.replace(
       "# Routing\n",
@@ -57,7 +57,7 @@ describe("resolvePosition", () => {
     expect(offsetToPos(edited, expected(edited)).line).toBe(pos.line + 4);
   });
 
-  it("recupera la posizione dopo cancellazione di righe", () => {
+  it("recovers the position after lines are deleted", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const edited = LESSON.replace(
       "Il routing statico usa la tabella principale del kernel.\n\n",
@@ -67,7 +67,7 @@ describe("resolvePosition", () => {
     expect(result).toMatchObject({ kind: "relocated", offset: expected(edited) });
   });
 
-  it("recupera con il solo contesto precedente se il testo dopo è cambiato", () => {
+  it("recovers with the preceding context alone when the text after changed", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const edited = LESSON.replace(
       "sorgente del pacchetto.\nLe tabelle aggiuntive",
@@ -77,7 +77,7 @@ describe("resolvePosition", () => {
     expect(result).toEqual({ kind: "relocated", offset: expected(edited), method: "before" });
   });
 
-  it("tollera differenze di spazi e fine riga CRLF", () => {
+  it("tolerates whitespace differences and CRLF line endings", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const crlf = normalizeNewlines(
       LESSON.replace(/\n/g, "\r\n").replace("basate sulla", "basate  sulla"),
@@ -89,7 +89,7 @@ describe("resolvePosition", () => {
     );
   });
 
-  it("con contesto duplicato usa i titoli per scegliere", () => {
+  it("with duplicated context uses headings to choose", () => {
     const block =
       "Ripeti questo comando dopo ogni modifica alla configurazione: systemctl reload.\n";
     const text = `# Linux\n\n## Rete\n\n${block}\n## Firewall\n\n${block}`;
@@ -102,19 +102,19 @@ describe("resolvePosition", () => {
     });
   });
 
-  it("con contesto duplicato e indistinguibile non sceglie da solo", () => {
+  it("with duplicated, indistinguishable context it does not choose", () => {
     const block =
       "\n\nRipeti questo comando dopo ogni modifica alla configurazione: systemctl reload.\n\n";
     const text = `# Note${block}---${block}`;
     const pos = capturePosition(text, text.indexOf("systemctl"), "editor");
-    // Il bookmark punta al primo blocco; il separatore che lo distingueva è stato cambiato.
+    // The bookmark points at the first block; the separator that told it apart was changed.
     const edited = text.replace("---", "***");
     const result = resolvePosition(edited, pos);
     expect(result.kind).toBe("ambiguous");
     expect(result.kind === "ambiguous" && result.candidates.length).toBe(2);
   });
 
-  it("restituisce notFound se il testo è stato rimosso", () => {
+  it("returns notFound when the text was removed", () => {
     const pos = bookmarkAt(LESSON, MARKER);
     const start = LESSON.indexOf("## Policy routing");
     const end = LESSON.indexOf("## Esempio pratico");
@@ -122,7 +122,7 @@ describe("resolvePosition", () => {
     expect(resolvePosition(edited, pos)).toEqual({ kind: "notFound" });
   });
 
-  it("non sposta bookmark migrati senza contesto oltre la riga salvata", () => {
+  it("does not move migrated bookmarks without context past the saved line", () => {
     const legacy: BookmarkPosition = {
       line: 5,
       ch: 3,

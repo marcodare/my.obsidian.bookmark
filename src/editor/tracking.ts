@@ -5,9 +5,9 @@ import { editorInfoField } from "obsidian";
 export type DocChangeHandler = (filePath: string, changes: ChangeDesc, doc: Text) => void;
 
 /**
- * Notifica le modifiche al documento fatte nell'editor con il focus.
- * Le altre viste dello stesso file ricevono le stesse modifiche sincronizzate da Obsidian:
- * ignorarle evita di applicare due volte lo spostamento degli offset.
+ * Reports document changes made in the focused editor.
+ * Other views of the same file receive the same changes, synced by Obsidian:
+ * ignoring them avoids shifting the offsets twice.
  */
 export function trackingExtension(onChange: DocChangeHandler): Extension {
   return EditorView.updateListener.of((update) => {

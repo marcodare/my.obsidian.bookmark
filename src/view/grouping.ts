@@ -1,13 +1,13 @@
-import type { GroupingMode, LessonBookmark, SortMode } from "../types";
+import type { GroupingMode, Bookmark, SortMode } from "../types";
 
 export interface GroupNode {
-  /** Chiave stabile, usata per ricordare i gruppi compressi. */
+  /** Stable key, used to remember collapsed groups. */
   readonly key: string;
   readonly label: string;
   readonly kind: "root" | "folder" | "file" | "bucket";
   readonly children: readonly GroupNode[];
-  readonly bookmarks: readonly LessonBookmark[];
-  /** Numero di bookmark in questo gruppo e nei sottogruppi. */
+  readonly bookmarks: readonly Bookmark[];
+  /** Number of bookmarks in this group and its subgroups. */
   readonly count: number;
 }
 
@@ -28,18 +28,15 @@ export function folderOf(path: string): string {
   return slash === -1 ? "" : path.slice(0, slash);
 }
 
-/** Cartella di primo livello ("ramo principale"); stringa vuota per i file nella radice. */
+/** Top-level folder ("main branch"); empty string for files at the vault root. */
 export function topFolderOf(path: string): string {
   const slash = path.indexOf("/");
   return slash === -1 ? "" : path.slice(0, slash);
 }
 
-export const ROOT_FOLDER_LABEL = "(radice del vault)";
+export const ROOT_FOLDER_LABEL = "(vault root)";
 
-export function sortBookmarks(
-  bookmarks: readonly LessonBookmark[],
-  mode: SortMode,
-): LessonBookmark[] {
+export function sortBookmarks(bookmarks: readonly Bookmark[], mode: SortMode): Bookmark[] {
   const sorted = [...bookmarks];
   switch (mode) {
     case "manual":
@@ -62,7 +59,7 @@ interface MutableNode {
   label: string;
   kind: GroupNode["kind"];
   children: Map<string, MutableNode>;
-  bookmarks: LessonBookmark[];
+  bookmarks: Bookmark[];
 }
 
 function node(key: string, label: string, kind: GroupNode["kind"]): MutableNode {
@@ -87,7 +84,7 @@ function freeze(n: MutableNode, sort: SortMode, childOrder?: readonly string[]):
   const ordered = childOrder
     ? childOrder.map((k) => n.children.get(k)).filter((c): c is MutableNode => c !== undefined)
     : values.sort((a, b) => {
-        // Le cartelle prima dei file, come nell'esplora file di Obsidian.
+        // Folders before files, as in Obsidian's file explorer.
         if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
         return collator.compare(a.label, b.label);
       });
@@ -100,11 +97,11 @@ function freeze(n: MutableNode, sort: SortMode, childOrder?: readonly string[]):
 type DateBucket = "today" | "yesterday" | "week" | "month" | "older";
 
 const BUCKET_LABELS: Record<DateBucket, string> = {
-  today: "Oggi",
-  yesterday: "Ieri",
-  week: "Ultimi 7 giorni",
-  month: "Ultimi 30 giorni",
-  older: "Più vecchi",
+  today: "Today",
+  yesterday: "Yesterday",
+  week: "Last 7 days",
+  month: "Last 30 days",
+  older: "Older",
 };
 const BUCKET_ORDER: readonly DateBucket[] = ["today", "yesterday", "week", "month", "older"];
 
@@ -123,9 +120,9 @@ export function dateBucket(iso: string, now: Date): DateBucket {
   return "older";
 }
 
-/** Costruisce l'albero dei gruppi mostrato nella sidebar. */
+/** Builds the group tree shown in the sidebar. */
 export function groupBookmarks(
-  bookmarks: readonly LessonBookmark[],
+  bookmarks: readonly Bookmark[],
   mode: GroupingMode,
   sort: SortMode,
   now: Date = new Date(),
@@ -187,7 +184,7 @@ export function groupBookmarks(
   }
 }
 
-/** Tutte le chiavi dei gruppi (per espandi/comprimi tutto). */
+/** All group keys (for expand/collapse all). */
 export function collectGroupKeys(root: GroupNode): string[] {
   return root.children.flatMap((c) => [c.key, ...collectGroupKeys(c)]);
 }

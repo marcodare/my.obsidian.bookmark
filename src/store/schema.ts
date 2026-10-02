@@ -1,10 +1,8 @@
-// zod/mini: stessa validazione di zod, senza i messaggi localizzati (bundle molto più piccolo).
+// zod/mini: same validation as zod, without localized messages (much smaller bundle).
 import * as z from "zod/mini";
 import { DEFAULT_SETTINGS } from "../types";
 
-const isoDate = z
-  .string()
-  .check(z.refine((s) => !Number.isNaN(Date.parse(s)), "data ISO non valida"));
+const isoDate = z.string().check(z.refine((s) => !Number.isNaN(Date.parse(s)), "invalid ISO date"));
 const nonNegativeInt = z.int().check(z.minimum(0));
 const nonEmpty = z.string().check(z.minLength(1));
 
@@ -34,7 +32,7 @@ export const bookmarkSchema = z.object({
 
 export const tombstoneSchema = z.object({ id: nonEmpty, deletedAt: isoDate });
 
-/** Ogni impostazione non valida ricade sul valore predefinito invece di invalidare tutto il file. */
+/** Each invalid setting falls back to its default instead of invalidating the whole file. */
 export const settingsSchema = z.catch(
   z.object({
     grouping: z.catch(
@@ -60,7 +58,7 @@ export const settingsSchema = z.catch(
   () => ({ ...DEFAULT_SETTINGS, collapsedGroups: [] }),
 );
 
-/** Contenitore v1: i singoli bookmark vengono validati a parte per non perdere quelli validi. */
+/** v1 envelope: bookmarks are validated one by one so valid ones are not lost. */
 export const storeV1Envelope = z.object({
   version: z.literal(1),
   bookmarks: z.array(z.unknown()),
@@ -68,7 +66,7 @@ export const storeV1Envelope = z.object({
   settings: z.unknown(),
 });
 
-/** Formato pre-rilascio (v0): senza `version`, posizione piatta, nessun contesto. */
+/** Pre-release format (v0): no `version`, flat position, no context. */
 export const legacyV0Schema = z.object({
   bookmarks: z.array(
     z.object({

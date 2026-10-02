@@ -3,3 +3,4 @@ main.js
 *.map
 data.json
 .env
+.DS_Store

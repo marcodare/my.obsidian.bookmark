@@ -10,7 +10,7 @@ export type ResolveResult =
   | { readonly kind: "ambiguous"; readonly candidates: readonly number[] }
   | { readonly kind: "notFound" };
 
-/** Un frammento più corto di così è troppo generico per identificare una posizione. */
+/** A fragment shorter than this is too generic to identify a position. */
 export const MIN_PROBE_LENGTH = 8;
 const SHORT_CONTEXT = 24;
 
@@ -20,7 +20,7 @@ interface Probe {
   readonly method: RelocationMethod;
 }
 
-/** Vero per posizioni senza alcun testo di riferimento (es. migrate dalla v0). */
+/** True for positions with no reference text at all (e.g. migrated from v0). */
 export function lacksContext(position: BookmarkPosition): boolean {
   return (
     position.contextBefore.length === 0 &&
@@ -63,7 +63,7 @@ function sameHeadings(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
-/** Riduce i candidati usando i titoli; restituisce l'insieme originale se il filtro li elimina tutti. */
+/** Narrows candidates using headings; returns the original set if the filter removes them all. */
 function disambiguate(text: string, position: BookmarkPosition, candidates: number[]): number[] {
   if (candidates.length <= 1) return candidates;
   const filtered = candidates.filter((c) =>
@@ -89,19 +89,19 @@ function findLineCandidates(text: string, position: BookmarkPosition): number[] 
 }
 
 /**
- * Trova la posizione di un bookmark nel testo attuale del documento.
+ * Finds a bookmark's position in the current document text.
  *
- * Non sceglie mai arbitrariamente tra più candidati: se il contesto compare più volte
- * e i titoli non bastano a distinguerli, restituisce "ambiguous".
+ * Never picks arbitrarily among several candidates: if the context occurs more than once
+ * and the headings cannot tell them apart, it returns "ambiguous".
  */
 export function resolvePosition(text: string, position: BookmarkPosition): ResolveResult {
   if (lacksContext(position) && text.length > 0) {
-    // Bookmark migrato da un formato senza contesto: l'unica informazione è riga/colonna.
+    // Bookmark migrated from a format without context: line/column is all we have.
     return { kind: "relocated", offset: posToOffset(text, position), method: "line" };
   }
 
   if (isExactAt(text, position)) {
-    // Contesto vuoto (documento vuoto alla creazione): valido solo se lo è ancora.
+    // Empty context (document was empty at creation): valid only if it still is.
     const hasContext = position.contextBefore.length + position.contextAfter.length > 0;
     if (hasContext || text.length === 0) return { kind: "exact", offset: position.offset };
   }
@@ -123,7 +123,7 @@ export function resolvePosition(text: string, position: BookmarkPosition): Resol
   return ambiguous ? { kind: "ambiguous", candidates: ambiguous } : { kind: "notFound" };
 }
 
-/** Offset di inizio riga per una riga salvata, limitato alla lunghezza del documento. */
+/** Line start offset for a saved line, clamped to the document length. */
 export function fallbackOffset(text: string, position: BookmarkPosition): number {
   return lineStartOffset(text, position.line);
 }

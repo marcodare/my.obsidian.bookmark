@@ -5,15 +5,15 @@ import type { PositionSource } from "../types";
 export interface CurrentLocation {
   readonly view: MarkdownView;
   readonly file: TFile;
-  /** Testo del documento con "\n" come fine riga. */
+  /** Document text with "\n" line endings. */
   readonly text: string;
   readonly offset: number;
   readonly source: PositionSource;
 }
 
 /**
- * Vista Markdown su cui agire. Quando il focus è nella sidebar, `getActiveViewOfType`
- * restituisce null: si usa allora l'ultima foglia attiva dell'area principale.
+ * Markdown view to act on. When the focus is in the sidebar, `getActiveViewOfType`
+ * returns null, so the most recent leaf of the main area is used instead.
  */
 export function findTargetMarkdownView(app: App): MarkdownView | null {
   const active = app.workspace.getActiveViewOfType(MarkdownView);
@@ -22,7 +22,7 @@ export function findTargetMarkdownView(app: App): MarkdownView | null {
   return recent?.view instanceof MarkdownView ? recent.view : null;
 }
 
-/** Primo offset non vuoto a partire dall'inizio di `line` (le righe vuote non hanno contesto utile). */
+/** First non-blank offset from the start of `line` (blank lines carry no useful context). */
 function firstContentOffset(text: string, line: number): number {
   let start = lineStartOffset(text, line);
   while (start < text.length) {
@@ -34,9 +34,9 @@ function firstContentOffset(text: string, line: number): number {
 }
 
 /**
- * Posizione corrente nella vista:
- * - modalità editing/Live Preview: il cursore;
- * - modalità lettura: la prima riga visibile (approssimata, non esiste un cursore).
+ * Current position in the view:
+ * - editing / Live Preview: the cursor;
+ * - reading view: the first visible line (approximate, there is no cursor).
  */
 export function getCurrentLocation(view: MarkdownView): CurrentLocation | null {
   const file = view.file;

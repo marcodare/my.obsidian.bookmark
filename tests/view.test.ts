@@ -56,8 +56,8 @@ function outline(node: GroupNode, depth = 0): string[] {
   ];
 }
 
-describe("raggruppamento", () => {
-  it("per percorso (albero), con ordinamento naturale delle cartelle", () => {
+describe("grouping", () => {
+  it("by path (tree), with natural folder order", () => {
     expect(outline(groupBookmarks(all, "pathTree", "manual"))).toEqual([
       "Cloud (1)",
       "  modulo00 (1)",
@@ -81,7 +81,7 @@ describe("raggruppamento", () => {
     ]);
   });
 
-  it("per percorso (piatto)", () => {
+  it("by path (flat)", () => {
     const root = groupBookmarks(all, "pathFlat", "name");
     expect(root.children.map((c) => c.label)).toEqual([
       "Cloud / modulo00 / lezione01 / lesson.md",
@@ -95,7 +95,7 @@ describe("raggruppamento", () => {
     ]);
   });
 
-  it("per cartella principale, nome file, nessuno", () => {
+  it("by top-level folder, file name, none", () => {
     expect(
       groupBookmarks(all, "topFolder", "manual").children.map((c) => `${c.label}:${c.count}`),
     ).toEqual(["Cloud:1", "Linux:3", "Networking:1"]);
@@ -108,37 +108,37 @@ describe("raggruppamento", () => {
     expect(none.bookmarks[0]!.updatedAt).toBe(T2);
   });
 
-  it("per data di modifica", () => {
+  it("by modified date", () => {
     const now = new Date("2026-01-03T18:00:00.000Z");
     expect(dateBucket(T2, now)).toBe("today");
     expect(dateBucket(T1, now)).toBe("yesterday");
     const root = groupBookmarks(all, "modifiedDate", "manual", now);
     expect(root.children.map((c) => `${c.label}:${c.count}`)).toEqual([
-      "Oggi:2",
-      "Ieri:2",
-      "Ultimi 7 giorni:1",
+      "Today:2",
+      "Yesterday:2",
+      "Last 7 days:1",
     ]);
   });
 
-  it("raccoglie tutte le chiavi dei gruppi", () => {
+  it("collects every group key", () => {
     const keys = collectGroupKeys(groupBookmarks(all, "pathTree", "manual"));
     expect(keys).toContain("tree:Linux/modulo00/lezione01");
     expect(new Set(keys).size).toBe(keys.length);
   });
 });
 
-describe("ricerca", () => {
-  it("query vuota restituisce tutto", () => {
+describe("search", () => {
+  it("an empty query returns everything", () => {
     expect(filterBookmarks(all, "  ")).toHaveLength(5);
   });
 
-  it("testo libero su nome, percorso e anteprima, senza accenti/maiuscole", () => {
+  it("free text over name, path and preview, ignoring accents/case", () => {
     expect(filterBookmarks(all, "networking").map((b) => b.name)).toEqual(["Da verificare"]);
     expect(filterBookmarks(all, "IMPORTANTE").map((b) => b.name)).toEqual(["Concetto importante"]);
     expect(filterBookmarks(all, "kernel").map((b) => b.name)).toEqual(["Concetto importante"]);
   });
 
-  it("filtri per nome e percorso", () => {
+  it("name and path filters", () => {
     expect(parseQuery('name:"da ri" path:linux')).toEqual({
       text: [],
       name: ["da ri"],
@@ -155,15 +155,15 @@ describe("ricerca", () => {
   });
 });
 
-describe("ramo principale", () => {
-  it("restituisce la cartella di primo livello", () => {
+describe("main branch", () => {
+  it("returns the top-level folder", () => {
     expect(topFolderOf("Linux/modulo00/lesson.md")).toBe("Linux");
     expect(topFolderOf("lesson.md")).toBe("");
   });
 });
 
-describe("ricerca nelle note", () => {
-  it("trova i bookmark per testo della nota", () => {
+describe("search in notes", () => {
+  it("finds bookmarks by note text", () => {
     const { bookmarks } = storeWith([
       { filePath: "a.md", name: "uno", text: LESSON, marker: "ip rule" },
     ]);

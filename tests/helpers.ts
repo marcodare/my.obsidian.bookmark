@@ -1,7 +1,7 @@
 import { capturePosition } from "../src/anchor/capture";
 import { createBookmark } from "../src/store/operations";
 import type { DataIO } from "../src/store/persistence";
-import { createEmptyStore, type BookmarkStore, type LessonBookmark } from "../src/types";
+import { createEmptyStore, type BookmarkStore, type Bookmark } from "../src/types";
 
 export const T0 = "2026-01-01T10:00:00.000Z";
 export const T1 = "2026-01-02T10:00:00.000Z";
@@ -12,7 +12,7 @@ export function idFactory(prefix = "id"): () => string {
   return () => `${prefix}-${++n}`;
 }
 
-/** Offset subito dopo la prima occorrenza di `marker`. */
+/** Offset right after the first occurrence of `marker`. */
 export function offsetAfter(text: string, marker: string): number {
   const index = text.indexOf(marker);
   if (index === -1) throw new Error(`marker "${marker}" non trovato`);
@@ -27,10 +27,10 @@ export function storeWith(
     marker: string;
     now?: string;
   }[],
-): { store: BookmarkStore; bookmarks: LessonBookmark[] } {
+): { store: BookmarkStore; bookmarks: Bookmark[] } {
   const newId = idFactory("bm");
   let store = createEmptyStore();
-  const bookmarks: LessonBookmark[] = [];
+  const bookmarks: Bookmark[] = [];
   for (const e of entries) {
     const position = capturePosition(e.text, offsetAfter(e.text, e.marker), "editor");
     const created = createBookmark(
@@ -45,7 +45,7 @@ export function storeWith(
   return { store, bookmarks };
 }
 
-/** DataIO in memoria che simula data.json e i file di backup. */
+/** In-memory DataIO simulating data.json and the backup files. */
 export class MemoryIO implements DataIO {
   raw: string | null;
   readonly backups = new Map<string, string>();

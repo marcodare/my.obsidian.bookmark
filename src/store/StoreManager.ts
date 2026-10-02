@@ -7,16 +7,16 @@ export interface StoreManagerOptions {
   readonly io: DataIO;
   readonly clock: () => string;
   readonly newId: () => string;
-  /** Messaggio leggibile da mostrare all'utente. */
+  /** Human-readable message to show the user. */
   readonly notify: (message: string) => void;
 }
 
 type Listener = (store: BookmarkStore) => void;
 
 /**
- * Stato in memoria + scrittura prudente di data.json.
- * Ogni scrittura rilegge il file, unisce le modifiche arrivate da altri dispositivi e poi salva.
- * Le scritture sono serializzate in coda.
+ * In-memory state + careful writes of data.json.
+ * Every write re-reads the file, merges changes from other devices, then saves.
+ * Writes are serialized in a queue.
  */
 export class StoreManager {
   private current: BookmarkStore = createEmptyStore();
@@ -57,13 +57,13 @@ export class StoreManager {
   }
 
   /**
-   * Applica una modifica e la salva. Restituisce false se lo store è in sola lettura.
-   * Con `debounceMs` il salvataggio viene posticipato e accorpato (es. tracciamento delle modifiche).
+   * Applies a change and saves it. Returns false when the store is read-only.
+   * With `debounceMs` the save is delayed and batched (e.g. edit tracking).
    */
   update(mutator: (store: BookmarkStore) => BookmarkStore, debounceMs = 0): boolean {
     if (this.readOnly) {
       this.options.notify(
-        "My Obsidian Bookmark è in sola lettura: data.json proviene da una versione più recente.",
+        "My Obsidian Bookmark is read-only: data.json comes from a newer version.",
       );
       return false;
     }
@@ -84,7 +84,7 @@ export class StoreManager {
     }, delayMs);
   }
 
-  /** Salva subito, accodandosi alle scritture in corso. */
+  /** Saves now, queued after writes in progress. */
   persist(): Promise<void> {
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer);
@@ -93,7 +93,7 @@ export class StoreManager {
     this.queue = this.queue
       .then(() => this.writeMerged())
       .catch((error: unknown) => {
-        this.options.notify(`Errore nel salvataggio dei bookmark: ${describe(error)}`);
+        this.options.notify(`Failed to save bookmarks: ${describe(error)}`);
       });
     return this.queue;
   }
@@ -104,7 +104,7 @@ export class StoreManager {
     const remote = await readRemote(this.options.io, ctx);
     switch (remote.kind) {
       case "ok": {
-        // `this.current` è letto dopo l'await: include le modifiche fatte nel frattempo.
+        // `this.current` is read after the await: it includes changes made meanwhile.
         const merged = mergeStores(this.current, remote.store, {
           settingsFrom: "local",
           now: ctx.now,
@@ -117,13 +117,13 @@ export class StoreManager {
       case "newer":
         this.readOnly = true;
         this.options.notify(
-          `data.json è stato aggiornato al formato v${remote.version} da un altro dispositivo. ` +
-            "Aggiorna My Obsidian Bookmark: le modifiche sono sospese.",
+          `data.json was upgraded to format v${remote.version} by another device. ` +
+            "Update My Obsidian Bookmark: editing is paused.",
         );
         return;
       case "corrupt":
         this.options.notify(
-          `data.json era danneggiato; copia salvata in ${remote.backup}. Riscritto con i dati in memoria.`,
+          `data.json was corrupt; copy saved to ${remote.backup}. Rewritten from the in-memory data.`,
         );
         break;
       case "missing":
@@ -132,7 +132,7 @@ export class StoreManager {
     await this.options.io.save(this.current);
   }
 
-  /** data.json è stato modificato dall'esterno (sync): unisce e aggiorna la vista. */
+  /** data.json was changed externally (sync): merges and refreshes the view. */
   async reloadFromDisk(): Promise<void> {
     this.queue = this.queue
       .then(async () => {
@@ -140,9 +140,7 @@ export class StoreManager {
         const remote = await readRemote(this.options.io, ctx);
         if (remote.kind === "newer") {
           this.readOnly = true;
-          this.options.notify(
-            "data.json proviene da una versione più recente del plugin: modifiche sospese.",
-          );
+          this.options.notify("data.json comes from a newer plugin version: editing is paused.");
           return;
         }
         if (remote.kind !== "ok") return;
@@ -152,17 +150,17 @@ export class StoreManager {
         });
         this.current = merged;
         this.emit();
-        // Riscrive solo se qui c'erano modifiche non ancora presenti sul disco.
+        // Rewrites only if there were local changes not yet on disk.
         if (JSON.stringify(merged) !== JSON.stringify(remote.store))
           await this.options.io.save(merged);
       })
       .catch((error: unknown) => {
-        this.options.notify(`Errore nel ricaricare i bookmark: ${describe(error)}`);
+        this.options.notify(`Failed to reload bookmarks: ${describe(error)}`);
       });
     return this.queue;
   }
 
-  /** Salva le modifiche in sospeso (alla chiusura del plugin). */
+  /** Saves pending changes (when the plugin unloads). */
   async flush(): Promise<void> {
     if (this.debounceTimer !== null) await this.persist();
     else await this.queue;

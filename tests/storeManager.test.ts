@@ -21,7 +21,7 @@ const add = (name: string, id: string) => (s: BookmarkStore) =>
   createBookmark(s, { filePath: "Linux/a.md", name, position }, T2, id).store;
 
 describe("StoreManager", () => {
-  it("salva in data.json e ricarica dopo il riavvio", async () => {
+  it("saves to data.json and reloads after a restart", async () => {
     const io = new MemoryIO();
     const first = manager(io).m;
     await first.load();
@@ -33,7 +33,7 @@ describe("StoreManager", () => {
     expect(second.store.bookmarks.map((b) => b.name)).toEqual(["Da riprendere"]);
   });
 
-  it("non perde bookmark creati da un altro dispositivo prima della scrittura", async () => {
+  it("does not lose bookmarks created on another device before the write", async () => {
     const { store: initial } = storeWith([
       { filePath: "Linux/a.md", name: "A", text: LESSON, marker: "ip rule" },
     ]);
@@ -41,7 +41,7 @@ describe("StoreManager", () => {
     const { m } = manager(io);
     await m.load();
 
-    // Il sync scrive un nuovo bookmark nel file mentre Obsidian è aperto.
+    // Sync writes a new bookmark into the file while Obsidian is open.
     const remote = createBookmark(
       initial,
       { filePath: "Cloud/b.md", name: "Remoto", position },
@@ -57,7 +57,7 @@ describe("StoreManager", () => {
     expect(m.store.bookmarks).toHaveLength(3);
   });
 
-  it("ricarica le modifiche esterne (rinomina ed eliminazione su un altro dispositivo)", async () => {
+  it("reloads external changes (rename and delete on another device)", async () => {
     const { store: initial, bookmarks } = storeWith([
       { filePath: "Linux/a.md", name: "A", text: LESSON, marker: "ip rule" },
       { filePath: "Linux/a.md", name: "B", text: LESSON, marker: "kernel" },
@@ -73,10 +73,10 @@ describe("StoreManager", () => {
 
     await m.reloadFromDisk();
     expect(m.store.bookmarks.map((b) => b.name)).toEqual(["A rinominato"]);
-    expect(io.saves).toBe(savesBefore); // niente da riscrivere
+    expect(io.saves).toBe(savesBefore); // nothing to rewrite
   });
 
-  it("rifiuta modifiche in sola lettura (data.json più recente)", async () => {
+  it("rejects edits while read-only (newer data.json)", async () => {
     const io = new MemoryIO(JSON.stringify({ version: 7, bookmarks: [] }));
     const { m, messages } = manager(io);
     await m.load();
@@ -86,7 +86,7 @@ describe("StoreManager", () => {
     expect(messages.length).toBeGreaterThan(0);
   });
 
-  it("le scritture concorrenti non si sovrascrivono", async () => {
+  it("concurrent writes do not overwrite each other", async () => {
     const io = new MemoryIO();
     const { m } = manager(io, () => T0);
     await m.load();

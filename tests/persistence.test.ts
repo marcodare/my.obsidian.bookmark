@@ -14,13 +14,13 @@ import { LESSON, MemoryIO, T0, T1, T2, idFactory, storeWith } from "./helpers";
 const ctx = { now: T2, newId: idFactory("new") };
 const LINUX = "Linux/modulo00/lezione01/lesson.md";
 
-describe("salvataggio e caricamento", () => {
-  it("file assente → store vuoto senza avvisi", async () => {
+describe("save and load", () => {
+  it("missing file → empty store without warnings", async () => {
     const outcome = await loadStore(new MemoryIO(null), ctx);
     expect(outcome).toEqual({ kind: "ok", store: createEmptyStore(), warnings: [] });
   });
 
-  it("round-trip JSON senza perdita di dati", async () => {
+  it("JSON round-trip without data loss", async () => {
     const { store } = storeWith([
       { filePath: LINUX, name: "Da riprendere", text: LESSON, marker: "ip rule" },
       {
@@ -39,7 +39,7 @@ describe("salvataggio e caricamento", () => {
     expect(io.backups.size).toBe(0);
   });
 
-  it("impostazioni mancanti o non valide ricadono sui valori predefiniti", async () => {
+  it("missing or invalid settings fall back to defaults", async () => {
     const io = new MemoryIO(
       JSON.stringify({
         version: 1,
@@ -54,7 +54,7 @@ describe("salvataggio e caricamento", () => {
   });
 });
 
-describe("migrazione", () => {
+describe("migration", () => {
   const v0 = {
     bookmarks: [
       { id: "old-1", file: LINUX, name: "Da verificare", line: 9, ch: 2, createdAt: T0 },
@@ -63,7 +63,7 @@ describe("migrazione", () => {
     ],
   };
 
-  it("converte v0 → v1", () => {
+  it("converts v0 → v1", () => {
     const result = migrate(v0, ctx);
     expect(result.migratedFrom).toBe(0);
     expect(result.droppedEntries).toBe(1);
@@ -79,18 +79,18 @@ describe("migrazione", () => {
     expect(result.store.bookmarks[1]!.id).toMatch(/^new-/);
   });
 
-  it("crea un backup del file originale prima di salvare la versione migrata", async () => {
+  it("backs up the original file before saving the migrated version", async () => {
     const original = JSON.stringify(v0);
     const io = new MemoryIO(original);
     const outcome = await loadStore(io, ctx);
-    expect(outcome.warnings[0]).toContain("formato v0");
+    expect(outcome.warnings[0]).toContain("format v0");
     const [name, content] = [...io.backups.entries()][0]!;
     expect(name).toMatch(/^data\.backup-v0-/);
     expect(content).toBe(original);
     expect(JSON.parse(io.raw!).version).toBe(1);
   });
 
-  it("un formato più recente non viene sovrascritto", async () => {
+  it("a newer format is not overwritten", async () => {
     const io = new MemoryIO(JSON.stringify({ version: 99, bookmarks: [] }));
     const outcome = await loadStore(io, ctx);
     expect(outcome.kind).toBe("readOnly");
@@ -99,26 +99,26 @@ describe("migrazione", () => {
   });
 });
 
-describe("dati corrotti", () => {
-  it("JSON non valido: backup del contenuto e ripartenza", async () => {
+describe("corrupt data", () => {
+  it("invalid JSON: backs up the content and starts over", async () => {
     const io = new MemoryIO('{"version": 1, "bookmarks": [');
     const outcome = await loadStore(io, ctx);
     expect(outcome.kind).toBe("ok");
     expect(outcome.store.bookmarks).toEqual([]);
-    expect(outcome.warnings[0]).toContain("non è leggibile");
+    expect(outcome.warnings[0]).toContain("is unreadable");
     const [name, content] = [...io.backups.entries()][0]!;
     expect(name).toMatch(/^data\.corrupt-/);
     expect(content).toBe('{"version": 1, "bookmarks": [');
   });
 
-  it("struttura non valida: backup e ripartenza", async () => {
+  it("invalid structure: backup and start over", async () => {
     const io = new MemoryIO(JSON.stringify(["non", "un", "oggetto"]));
     const outcome = await loadStore(io, ctx);
     expect(outcome.store.bookmarks).toEqual([]);
     expect([...io.backups.keys()][0]).toMatch(/^data\.corrupt-/);
   });
 
-  it("voci singole non valide vengono scartate, le altre conservate", async () => {
+  it("single invalid entries are dropped, the others kept", async () => {
     const { store } = storeWith([
       { filePath: LINUX, name: "Buono", text: LESSON, marker: "ip rule" },
     ]);
@@ -126,19 +126,19 @@ describe("dati corrotti", () => {
     const io = new MemoryIO(JSON.stringify(raw));
     const outcome = await loadStore(io, ctx);
     expect(outcome.store.bookmarks.map((b) => b.name)).toEqual(["Buono"]);
-    expect(outcome.warnings[0]).toContain("1 voci non valide");
+    expect(outcome.warnings[0]).toContain("1 invalid entries");
     expect([...io.backups.keys()][0]).toMatch(/^data\.backup-invalid-/);
   });
 });
 
-describe("unione con le modifiche di un altro dispositivo", () => {
+describe("merging with changes from another device", () => {
   const base = () =>
     storeWith([
       { filePath: LINUX, name: "A", text: LESSON, marker: "ip rule" },
       { filePath: LINUX, name: "B", text: LESSON, marker: "kernel" },
     ]);
 
-  it("mantiene i bookmark creati altrove e quelli locali", () => {
+  it("keeps bookmarks created elsewhere and local ones", () => {
     const { store: local } = base();
     const { store: remoteOnly } = storeWith([
       { filePath: "Cloud/x.md", name: "R", text: LESSON, marker: "kernel" },
@@ -151,7 +151,7 @@ describe("unione con le modifiche di un altro dispositivo", () => {
     expect(merged.bookmarks.map((b) => b.name)).toEqual(["A", "B", "R"]);
   });
 
-  it("per lo stesso bookmark vince la revisione più recente", () => {
+  it("for the same bookmark the most recent revision wins", () => {
     const { store, bookmarks } = base();
     const remote = renameBookmark(store, bookmarks[0]!.id, "Rinominato altrove", T2);
     const local = renameBookmark(store, bookmarks[0]!.id, "Rinominato qui", T1);
@@ -159,7 +159,7 @@ describe("unione con le modifiche di un altro dispositivo", () => {
     expect(merged.bookmarks[0]!.name).toBe("Rinominato altrove");
   });
 
-  it("una correzione automatica locale non annulla un aggiornamento fatto altrove", () => {
+  it("a local automatic fix does not undo an update made elsewhere", () => {
     const { store, bookmarks } = base();
     const id = bookmarks[0]!.id;
     const remote = updateBookmarkPosition(store, id, "Linux/nuovo.md", bookmarks[1]!.position, T1);
@@ -175,7 +175,7 @@ describe("unione con le modifiche di un altro dispositivo", () => {
     });
   });
 
-  it("un bookmark eliminato altrove non ricompare", () => {
+  it("a bookmark deleted elsewhere does not come back", () => {
     const { store, bookmarks } = base();
     const remote = deleteBookmark(store, bookmarks[1]!.id, T1);
     const merged = mergeStores(store, remote, { settingsFrom: "local", now: T2 });
@@ -183,13 +183,13 @@ describe("unione con le modifiche di un altro dispositivo", () => {
     expect(merged.tombstones).toHaveLength(1);
   });
 
-  it("i tombstone vecchi vengono eliminati", () => {
+  it("old tombstones are pruned", () => {
     const { store } = base();
     const old = { ...store, tombstones: [{ id: "x", deletedAt: "2020-01-01T00:00:00.000Z" }] };
     expect(mergeStores(old, store, { settingsFrom: "local", now: T2 }).tombstones).toEqual([]);
   });
 
-  it("readRemote segnala un file corrotto senza lanciare eccezioni", async () => {
+  it("readRemote reports a corrupt file without throwing", async () => {
     const io = new MemoryIO("{rotto");
     const result = await readRemote(io, ctx);
     expect(result.kind).toBe("corrupt");

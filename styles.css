@@ -1,56 +1,56 @@
-/* My Obsidian Bookmark — usa solo variabili del tema di Obsidian (chiaro/scuro). */
+/* My Obsidian Bookmark — uses only Obsidian theme variables (light/dark). */
 
-.lesson-bookmarks-view {
+.my-obsidian-bookmark-view {
   display: flex;
   flex-direction: column;
   padding: 0;
 }
 
-.lesson-bookmarks-header {
+.my-obsidian-bookmark-header {
   flex: 0 0 auto;
 }
 
-.lesson-bookmarks-search {
+.my-obsidian-bookmark-search {
   padding: var(--size-4-2) var(--size-4-3) 0;
 }
 
-.lesson-bookmarks-search .search-input-container {
+.my-obsidian-bookmark-search .search-input-container {
   width: 100%;
 }
 
-.lesson-bookmarks-count {
+.my-obsidian-bookmark-count {
   padding: var(--size-4-2) var(--size-4-3);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.lesson-bookmarks-count .mod-warning {
+.my-obsidian-bookmark-count .mod-warning {
   color: var(--text-error);
 }
 
-.lesson-bookmarks-list {
+.my-obsidian-bookmark-list {
   flex: 1 1 auto;
   overflow-y: auto;
   padding: var(--size-4-1) var(--size-4-2) var(--size-4-8);
 }
 
-.lesson-bookmarks-empty {
+.my-obsidian-bookmark-empty {
   padding: var(--size-4-4) var(--size-4-2);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: var(--line-height-normal);
 }
 
-.lesson-bookmarks-empty-title {
+.my-obsidian-bookmark-empty-title {
   font-weight: var(--font-semibold);
   color: var(--text-normal);
   margin-bottom: var(--size-4-1);
 }
 
-/* ---- Gruppi ---- */
+/* ---- Groups ---- */
 
-.lesson-bookmarks-group-header {
+.my-obsidian-bookmark-group-header {
   display: flex;
   align-items: center;
   gap: var(--size-4-1);
@@ -63,26 +63,26 @@
   user-select: none;
 }
 
-.lesson-bookmarks-group-header:hover,
-.lesson-bookmarks-group-header:focus-visible {
+.my-obsidian-bookmark-group-header:hover,
+.my-obsidian-bookmark-group-header:focus-visible {
   background-color: var(--nav-item-background-hover);
   color: var(--nav-item-color-hover);
 }
 
-.lesson-bookmarks-group-chevron,
-.lesson-bookmarks-group-icon {
+.my-obsidian-bookmark-group-chevron,
+.my-obsidian-bookmark-group-icon {
   display: flex;
   color: var(--icon-color);
   flex: 0 0 auto;
 }
 
-.lesson-bookmarks-group-chevron svg,
-.lesson-bookmarks-group-icon svg {
+.my-obsidian-bookmark-group-chevron svg,
+.my-obsidian-bookmark-group-icon svg {
   width: var(--icon-xs);
   height: var(--icon-xs);
 }
 
-.lesson-bookmarks-group-label {
+.my-obsidian-bookmark-group-label {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -90,14 +90,14 @@
   white-space: nowrap;
 }
 
-.lesson-bookmarks-group-count {
+.my-obsidian-bookmark-group-count {
   flex: 0 0 auto;
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   padding: 0 var(--size-4-1);
 }
 
-.lesson-bookmarks-children {
+.my-obsidian-bookmark-children {
   margin-inline-start: calc(var(--size-4-2) + 1px);
   padding-inline-start: var(--size-4-2);
   border-inline-start: var(--nav-indentation-guide-width, 1px) solid
@@ -106,7 +106,7 @@
 
 /* ---- Bookmark ---- */
 
-.lesson-bookmark-item {
+.my-obsidian-bookmark-item {
   padding: var(--size-4-1) var(--size-4-2);
   margin: 1px 0;
   border-radius: var(--radius-s);
@@ -114,38 +114,38 @@
   border: 1px solid transparent;
 }
 
-.lesson-bookmark-item:hover,
-.lesson-bookmark-item:focus-visible {
+.my-obsidian-bookmark-item:hover,
+.my-obsidian-bookmark-item:focus-visible {
   background-color: var(--nav-item-background-hover);
 }
 
-.lesson-bookmark-row {
+.my-obsidian-bookmark-row {
   display: flex;
   align-items: center;
   gap: var(--size-4-1);
 }
 
-.lesson-bookmark-icon {
+.my-obsidian-bookmark-icon {
   display: flex;
   flex: 0 0 auto;
   color: var(--color-accent);
 }
 
-.lesson-bookmark-icon svg {
+.my-obsidian-bookmark-icon svg {
   width: var(--icon-s);
   height: var(--icon-s);
 }
 
-.lesson-bookmark-item.is-unresolved .lesson-bookmark-icon {
+.my-obsidian-bookmark-item.is-unresolved .my-obsidian-bookmark-icon {
   color: var(--color-orange);
 }
 
-.lesson-bookmark-item.is-orphan .lesson-bookmark-icon,
-.lesson-bookmark-item.is-orphan .lesson-bookmark-name {
+.my-obsidian-bookmark-item.is-orphan .my-obsidian-bookmark-icon,
+.my-obsidian-bookmark-item.is-orphan .my-obsidian-bookmark-name {
   color: var(--text-error);
 }
 
-.lesson-bookmark-name {
+.my-obsidian-bookmark-name {
   flex: 1 1 auto;
   min-width: 0;
   font-size: var(--font-ui-small);
@@ -156,25 +156,25 @@
   white-space: nowrap;
 }
 
-.lesson-bookmark-date {
+.my-obsidian-bookmark-date {
   flex: 0 0 auto;
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   white-space: nowrap;
 }
 
-.lesson-bookmark-more {
+.my-obsidian-bookmark-more {
   flex: 0 0 auto;
   padding: var(--size-2-1);
   opacity: 0.6;
 }
 
-.lesson-bookmark-item:hover .lesson-bookmark-more,
-.lesson-bookmark-more:focus-visible {
+.my-obsidian-bookmark-item:hover .my-obsidian-bookmark-more,
+.my-obsidian-bookmark-more:focus-visible {
   opacity: 1;
 }
 
-.lesson-bookmark-meta {
+.my-obsidian-bookmark-meta {
   display: flex;
   gap: var(--size-4-2);
   margin-inline-start: calc(var(--icon-s) + var(--size-4-1));
@@ -183,11 +183,11 @@
   min-width: 0;
 }
 
-.lesson-bookmark-note {
+.my-obsidian-bookmark-note {
   flex: 0 0 auto;
 }
 
-.lesson-bookmark-path {
+.my-obsidian-bookmark-path {
   flex: 1 1 auto;
   min-width: 0;
   color: var(--text-faint);
@@ -198,7 +198,7 @@
   text-align: left;
 }
 
-.lesson-bookmark-preview {
+.my-obsidian-bookmark-preview {
   margin-inline-start: calc(var(--icon-s) + var(--size-4-1));
   margin-top: var(--size-2-1);
   font-size: var(--font-ui-smaller);
@@ -210,7 +210,7 @@
   overflow: hidden;
 }
 
-.lesson-bookmark-note-text {
+.my-obsidian-bookmark-note-text {
   margin-inline-start: calc(var(--icon-s) + var(--size-4-1));
   margin-top: var(--size-2-1);
   font-size: var(--font-ui-smaller);
@@ -224,59 +224,59 @@
   overflow: hidden;
 }
 
-.lesson-bookmark-rename {
+.my-obsidian-bookmark-rename {
   flex: 1 1 auto;
   min-width: 0;
   font-size: var(--font-ui-small);
 }
 
-/* Drag & drop (solo desktop, ordinamento manuale). */
-.lesson-bookmark-item.is-dragging {
+/* Drag & drop (desktop only, manual sort). */
+.my-obsidian-bookmark-item.is-dragging {
   opacity: 0.5;
 }
 
-.lesson-bookmark-item.drop-before {
+.my-obsidian-bookmark-item.drop-before {
   border-top-color: var(--interactive-accent);
 }
 
-.lesson-bookmark-item.drop-after {
+.my-obsidian-bookmark-item.drop-after {
   border-bottom-color: var(--interactive-accent);
 }
 
-/* Bersagli più grandi sui dispositivi touch. */
-.is-mobile .lesson-bookmark-item {
+/* Larger targets on touch devices. */
+.is-mobile .my-obsidian-bookmark-item {
   padding: var(--size-4-2) var(--size-4-2);
 }
 
-.is-mobile .lesson-bookmark-more {
+.is-mobile .my-obsidian-bookmark-more {
   opacity: 1;
   padding: var(--size-4-1);
 }
 
-.is-mobile .lesson-bookmarks-group-header {
+.is-mobile .my-obsidian-bookmark-group-header {
   padding: var(--size-4-2) var(--size-4-1);
 }
 
-/* ---- Evidenziazione nell'editor ---- */
+/* ---- Editor highlight ---- */
 
-.lesson-bookmark-flash {
+.my-obsidian-bookmark-flash {
   background-color: rgba(var(--color-yellow-rgb), 0.3);
   transition: background-color 0.4s ease-out;
 }
 
 /* ---- Modal ---- */
 
-.lesson-bookmarks-hint {
+.my-obsidian-bookmark-hint {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   word-break: break-all;
 }
 
-.lesson-bookmarks-invalid {
+.my-obsidian-bookmark-invalid {
   border-color: var(--text-error) !important;
 }
 
-.lesson-bookmarks-choice-list {
+.my-obsidian-bookmark-choice-list {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
@@ -284,7 +284,7 @@
   overflow-y: auto;
 }
 
-.lesson-bookmarks-choice {
+.my-obsidian-bookmark-choice {
   display: block;
   height: auto;
   text-align: start;
@@ -292,11 +292,11 @@
   white-space: normal;
 }
 
-.lesson-bookmarks-choice-label {
+.my-obsidian-bookmark-choice-label {
   font-weight: var(--font-medium);
 }
 
-.lesson-bookmarks-choice-desc {
+.my-obsidian-bookmark-choice-desc {
   margin-top: var(--size-2-1);
   font-size: var(--font-ui-smaller);
   opacity: 0.8;
@@ -304,30 +304,30 @@
   word-break: break-word;
 }
 
-.lesson-bookmarks-note-setting {
+.my-obsidian-bookmark-note-setting {
   flex-direction: column;
   align-items: stretch;
   gap: var(--size-4-2);
 }
 
-.lesson-bookmarks-note-setting .setting-item-control,
-.lesson-bookmarks-note-input {
+.my-obsidian-bookmark-note-setting .setting-item-control,
+.my-obsidian-bookmark-note-input {
   width: 100%;
 }
 
-.lesson-bookmarks-note-input {
+.my-obsidian-bookmark-note-input {
   min-height: 6em;
   resize: vertical;
 }
 
-.lesson-bookmarks-choice-path {
+.my-obsidian-bookmark-choice-path {
   margin-top: var(--size-2-1);
   font-size: var(--font-ui-smaller);
   opacity: 0.8;
   word-break: break-word;
 }
 
-.lesson-bookmarks-choice-note {
+.my-obsidian-bookmark-choice-note {
   margin-top: var(--size-2-1);
   font-size: var(--font-ui-smaller);
   font-style: italic;
@@ -339,7 +339,7 @@
   overflow: hidden;
 }
 
-.lesson-bookmarks-details-note {
+.my-obsidian-bookmark-details-note {
   white-space: pre-wrap;
   font-size: var(--font-ui-small);
   padding: var(--size-4-2) var(--size-4-3);
@@ -347,13 +347,13 @@
   border-radius: var(--radius-s);
 }
 
-.lesson-bookmarks-details {
+.my-obsidian-bookmark-details {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--font-ui-small);
 }
 
-.lesson-bookmarks-details th {
+.my-obsidian-bookmark-details th {
   text-align: start;
   color: var(--text-muted);
   font-weight: var(--font-normal);
@@ -362,12 +362,12 @@
   vertical-align: top;
 }
 
-.lesson-bookmarks-details td {
+.my-obsidian-bookmark-details td {
   padding: var(--size-2-2) 0;
   word-break: break-word;
 }
 
-.lesson-bookmarks-details-preview {
+.my-obsidian-bookmark-details-preview {
   white-space: pre-wrap;
   font-size: var(--font-ui-small);
   background: var(--background-secondary);
