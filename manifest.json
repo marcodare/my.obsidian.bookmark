@@ -1,0 +1,9 @@
+{
+  "id": "lesson-bookmarks",
+  "name": "My Obsidian Bookmark",
+  "version": "1.0.0",
+  "minAppVersion": "1.7.2",
+  "description": "Bookmark nominati su posizioni precise dentro le note Markdown, salvati senza modificare le note e mostrati in una sidebar dedicata.",
+  "author": "Marco",
+  "isDesktopOnly": false
+}
